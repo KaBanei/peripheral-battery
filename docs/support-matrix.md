@@ -33,7 +33,8 @@
 | SteelSeries | 无线耳机/鼠标 | 2.4G | ❌（仅识别） | 仅官方 GG 暴露电量；通用识别可列出设备（电量未知） | [SteelSeries GG](https://steelseries.com/gg) |
 | Corsair | 无线耳机/鼠标 | 2.4G | ❌（仅识别） | 仅官方 iCUE，协议闭源；通用识别可列出设备（电量未知） | [iCUE](https://www.corsair.com/us/en/s/icue) |
 | HyperX | Cloud 系列无线耳机等 | 2.4G | ❌（仅识别） | 仅官方 NGENUITY；通用识别可列出设备（电量未知） | [NGENUITY](https://hyperx.com/pages/ngenuity) |
-| VGN | 无线鼠标/键盘 | 2.4G | ❌（仅识别） | 仅官方 VGN HUB；本机实测 3554:F503 / 320F:5088 可被通用识别列出（电量未知），可重命名 | [VGN 官网](https://www.vgnlab.com.cn/) |
+| VGN | 蜻蜓 F1 系列鼠标（3554:F503 接收器） | 2.4G | ✅（实验） | 已逆向 VHUB WebHID 协议：output report 8、PCDriverStatus 握手、电池命令 0x04；本机实测 90% / 4059mV，设备休眠时显示未知 | 本项目实测 |
+| VGN | V98Pro V2 键盘（320F:5088 接收器） | 2.4G | ⚠️（仅识别） | 控制接口 FFEF / Windows output report 5 可发送，但未收到电量回包（设备休眠或固件命令差异）；可运行 VgnProbe 抓日志继续适配 | 本项目实测 |
 | Apple / Sony / Bose / Jabra 等 | BLE 耳机、鼠标、键盘 | 蓝牙 | ⚠️ | 若厂商实现 GATT Battery Service（0x2A19）则可能被系统读到；否则读不到 | [Keychron 实测（说明机制）](https://pmortensen.eu/world2/2024/11/04/the-battery-state-of-a-keychron-qmk-based-keyboard-can-be-displayed-in-the-operating-system/) |
 
 ## 3. 明确不做的事

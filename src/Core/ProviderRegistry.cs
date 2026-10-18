@@ -13,6 +13,7 @@ namespace Pb.Core
             Add(list, "Pb.Core.Providers.StandardHidBatteryProvider", config, ctx);
             Add(list, "Pb.Core.Providers.BluetoothBatteryProvider", config, ctx);
             Add(list, "Pb.Core.Providers.XInputBatteryProvider", config, ctx);
+            Add(list, "Pb.Core.Providers.VgnBatteryProvider", config, ctx);
             Add(list, "Pb.Core.Providers.GenericHidPeripheralProvider", config, ctx);
             Add(list, "Pb.Core.Providers.SimulationProvider", config, ctx);
             return list;

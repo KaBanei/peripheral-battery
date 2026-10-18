@@ -37,6 +37,7 @@
 | 标准 HID 电量（Usage 0x06/0x20） | 少数按规范上报的外设 | 百分比 | ⚠️ 2.4G dongle 极少暴露 |
 | Windows 蓝牙电量属性 | 已连接、系统能拿到电量的蓝牙设备（以 BLE 为主） | 百分比 | ✅ 本机实测可读到 BLE 设备 |
 | Xbox / XInput 手柄 | Xbox One / Series、兼容手柄 | 4 档 → 估 5/25/50/100 | ✅ 已实现（本机无手柄，负向路径已验证） |
+| VGN 2.4G 鼠标（实验） | VGN 蜻蜓 F1 系（3554:F503 接收器） | 百分比 + 充电状态 + 电压 | ✅ 已实测 |
 | 通用外设识别 | 任意品牌的 2.4G / 无线 HID 键鼠（仅识别，不读电量） | 无（显示“未知”） | ✅ |
 | 模拟数据 | 演示与自检 | — | ✅ |
 
@@ -91,7 +92,7 @@ powershell -ExecutionPolicy Bypass -File installer/install.ps1
 ## 常见问题
 
 **Q：为什么我的雷蛇 / VGN / 赛睿鼠标没有电量？**
-A：这些品牌走私有 2.4G 协议，Windows 和本工具都读不到精确电量；只有厂商软件知道。程序仍会把设备列出来（显示“未知”），可以重命名便于区分。详见 [支持矩阵](docs/support-matrix.md)。
+A：这些品牌走私有 2.4G 协议，Windows 没有统一接口。本工具已经针对 **VGN 蜻蜓 F1 系鼠标（3554:F503）** 逆向并接入 VHUB 的 WebHID 协议，实测能读百分比/充电/电压；其它型号（包括 VGN V98Pro V2 键盘）尚未拿到电量，会显示“未知”并把设备列出来，可重命名区分。详见 [支持矩阵](docs/support-matrix.md)。
 
 **Q：罗技鼠标显示“未知”或读不到？**
 A：先确认接收器插好、设备已开机并连接；在 `BatteryProbe.exe --dump` 里应能看到 `VID_046D` 且 Usage Page 为 `0xFF00` 的厂商集合。部分设备（尤其被厂商软件独占的）需要关闭 G HUB / Options+ 再试。仍不行就复制诊断信息反馈。
@@ -153,6 +154,10 @@ dist/app/              构建产物（PeripheralBattery.exe、BatteryProbe.exe�
 新增品牌支持请按 [docs/architecture.md](docs/architecture.md) 的六步实现一个 `IProvider`，并在 `ProviderRegistry` 注册。
 
 ## 更新日志
+
+### v1.1.1（2026-10-18）
+- 新增 VGN 2.4G 鼠标实验性电量读取：逆向 VGN VHUB 的 WebHID 私有协议（output report 8 + PCDriverStatus 握手 + 电池命令 0x04），本机实测 90% / 4059mV 正常显示。
+- 附带 VgnProbe.exe 诊断工具：持续移动/敲击设备时抓取 VGN 私有协议日志，用于继续适配键盘等型号。
 
 ### v1.1.0（2026-10-18）
 - 新增**通用外设识别**：即使品牌没有公开电量协议（VGN、雷蛇、赛睿等），设备也会按“鼠标 / 键盘 / 耳机 / 手柄”出现在列表里，电量显示“未知”，不再完全看不到。

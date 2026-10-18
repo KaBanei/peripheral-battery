@@ -27,6 +27,7 @@ src/
       StandardHidBatteryProvider.cs
       BluetoothBatteryProvider.cs
       XInputBatteryProvider.cs
+  VgnBatteryProvider.cs             VGN 2.4G 鼠标（实验，VHUB WebHID 协议）
       SimulationProvider.cs
   App/                       WinForms 托盘 UI（UI 组负责）
   app.manifest               DPI 感知等

@@ -95,6 +95,17 @@ if ($Probe) {
     foreach ($s in $probeSources) { $argsProbe.Add($s) }
     Invoke-Csc -ArgList $argsProbe
     Write-Host ('  OK ' + $probeExe) -ForegroundColor Green
+
+    Write-Host '== building VgnProbe.exe =='
+    $vgnSources = @()
+    $vgnSources += Get-ChildItem -Path (Join-Path $root 'src\Core') -Recurse -Filter *.cs | ForEach-Object { $_.FullName }
+    $vgnSources += Get-ChildItem -Path (Join-Path $root 'tools\VgnProbe') -Recurse -Filter *.cs -ErrorAction SilentlyContinue | ForEach-Object { $_.FullName }
+    $vgnExe = Join-Path $bin 'VgnProbe.exe'
+    $argsVgn = New-Object 'System.Collections.Generic.List[string]'
+    Add-CommonArgs -List $argsVgn -Target 'exe' -OutPath $vgnExe -MainClass 'VgnProbeProgram' -IconPath $null
+    foreach ($s in $vgnSources) { $argsVgn.Add($s) }
+    Invoke-Csc -ArgList $argsVgn
+    Write-Host ('  OK ' + $vgnExe) -ForegroundColor Green
 }
 
 if ($Run) { Start-Process -FilePath $exe }
