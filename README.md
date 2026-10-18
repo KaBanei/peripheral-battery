@@ -57,13 +57,14 @@
 
 **免安装（推荐先试）**
 
-1. 打开 `dist\app\`，双击 `PeripheralBattery.exe`；
-2. 首次启动会显示引导，点“开始使用”；
-3. 托盘出现电池图标后，左键打开悬浮面板，右键打开菜单。
+1. 从 [Releases](https://github.com/KaBanei/peripheral-battery/releases) 下载最新 zip 并解压；
+2. 双击解压目录里的 `PeripheralBattery.exe`；
+3. 首次启动点“开始使用”，托盘出现电池图标后左键打开悬浮面板。
 
-**安装到本机**
+**从源码构建 / 安装到本机**
 
 ```powershell
+powershell -ExecutionPolicy Bypass -File build.ps1 -Probe
 powershell -ExecutionPolicy Bypass -File installer/install.ps1
 # 可选参数：-DesktopShortcut  -NoAutoStart  -InstallDir "D:\Tools\PeripheralBattery"
 ```
@@ -80,13 +81,13 @@ powershell -ExecutionPolicy Bypass -File installer/install.ps1
 - **设置项**：刷新间隔（5–300 秒）、托盘显示策略、浮窗透明度（20–100%）、低电量阈值、气泡提醒、开机启动、各数据源开关（改动需重启程序生效）、详细日志。
 - **配置与日志**：`%APPDATA%\PeripheralBattery\config.json` / `app.log`；如果该目录不可写（受限环境或绿色运行），自动改用 exe 同级的 `data\` 目录。
 - **命令行开关**（便于排障）：
-  - `--tray` 静默启动到托盘
+  - `--tray` 启动并显示侧边浮窗（无主窗口）
   - `--show` 启动并显示主面板
   - `--flyout` 启动并直接弹出悬浮面板
   - `--settings` 直接打开设置
   - `--diagnose` 显示诊断信息
   - `--demo` 强制打开演示数据
-- **诊断工具**：`dist\app\BatteryProbe.exe`
+- **诊断工具**：发布包里的 `BatteryProbe.exe`（源码构建时为 `dist\app\BatteryProbe.exe`）
 
   ```text
   BatteryProbe.exe --dump       # 列出全部 HID 接口与 usage（排查设备是否暴露电量）

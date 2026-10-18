@@ -53,7 +53,16 @@ if (-not $InstallDir) {
     $InstallDir = Join-Path $env:LOCALAPPDATA 'Programs\PeripheralBattery'
 }
 if (-not $SourceDir) {
-    $SourceDir = Join-Path $repoRoot 'dist\app'
+    $built = Join-Path $repoRoot 'dist\app'
+    $packaged = $repoRoot
+    if (Test-Path -LiteralPath (Join-Path $built $exeName)) {
+        $SourceDir = $built
+    } elseif (Test-Path -LiteralPath (Join-Path $packaged $exeName)) {
+        # Release zip layout: PeripheralBattery.exe sits next to installer\
+        $SourceDir = $packaged
+    } else {
+        $SourceDir = $built
+    }
 }
 
 Write-Host '== 2.4G 外设电量监控 · 安装 ==' -ForegroundColor Cyan
@@ -62,7 +71,7 @@ Write-Host ('安装目录: ' + $InstallDir)
 
 $sourceExe = Join-Path $SourceDir $exeName
 if (-not (Test-Path -LiteralPath $sourceExe)) {
-    throw ('找不到 ' + $sourceExe + '。请先运行 build.ps1 构建，或用 -SourceDir 指定 dist\app 的位置。')
+    throw ('找不到 ' + $sourceExe + '。请先从 Releases 下载发布包，或运行 build.ps1 构建，或用 -SourceDir 指定程序所在目录。')
 }
 $exePath = Join-Path $InstallDir $exeName
 
