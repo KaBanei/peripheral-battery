@@ -330,8 +330,10 @@ namespace Pb.App
         {
             try
             {
-                if (_tray == null || !_tray.Visible) return;
-                _tray.ShowBalloonTip(5000, title, text, icon);
+                NotifyIcon target = _tray;
+                if (_iconMode && _deviceIcons.Count > 0) target = _deviceIcons[0];
+                if (target == null || !target.Visible) return;
+                target.ShowBalloonTip(5000, title, text, icon);
             }
             catch (Exception ex) { Log.Warn("气泡提示失败: " + ex.Message); }
         }
@@ -489,7 +491,7 @@ namespace Pb.App
 
         private void UpdateDeviceIcons()
         {
-            HideDeviceIcons();
+            HideDeviceIcons(false);
             if (!_iconMode) return;
             int n = Math.Min(_devices.Count, 6);
             for (int i = 0; i < n; i++)
@@ -498,7 +500,7 @@ namespace Pb.App
                 NotifyIcon ni = new NotifyIcon();
                 try
                 {
-                    ni.Icon = _icons.Create(new List<Peripheral> { d }, "worst");
+                    ni.Icon = IconRenderer.CreateBadge(d);
                     string name = string.IsNullOrEmpty(d.Name) ? d.KindText : d.Name;
                     string text = name + " " + Fmt.Percent(d.Percent);
                     ni.Text = text.Length > 63 ? text.Substring(0, 63) : text;
@@ -516,9 +518,16 @@ namespace Pb.App
                     try { ni.Dispose(); } catch { }
                 }
             }
+            try { _tray.Visible = _deviceIcons.Count == 0; } catch { }
+            Log.Info("托盘图标模式: " + _deviceIcons.Count + " 个设备图标");
         }
 
         private void HideDeviceIcons()
+        {
+            HideDeviceIcons(true);
+        }
+
+        private void HideDeviceIcons(bool restoreMainIcon)
         {
             for (int i = 0; i < _deviceIcons.Count; i++)
             {
@@ -528,6 +537,10 @@ namespace Pb.App
                 try { ni.Dispose(); } catch { }
             }
             _deviceIcons.Clear();
+            if (restoreMainIcon)
+            {
+                try { if (_tray != null) _tray.Visible = true; } catch { }
+            }
         }
 
         private void RestoreFromIcons()

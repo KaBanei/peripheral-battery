@@ -4,6 +4,7 @@ using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.Drawing.Text;
+using System.Windows.Forms;
 using Pb.Core;
 
 namespace Pb.App
@@ -113,6 +114,38 @@ namespace Pb.App
             {
                 return ToIcon(bmp);
             }
+        }
+
+        /// <summary>托盘图标模式：生成带大号百分比的彩色方形徽标，适配 16/20px 通知区尺寸。</summary>
+        public static Icon CreateBadge(Peripheral d)
+        {
+            int size = Math.Max(16, SystemInformation.SmallIconSize.Width);
+            using (Bitmap bmp = RenderBadgeBitmap(size, d))
+            {
+                return ToIcon(bmp);
+            }
+        }
+
+        private static Bitmap RenderBadgeBitmap(int size, Peripheral d)
+        {
+            Bitmap bmp = new Bitmap(size, size, PixelFormat.Format32bppArgb);
+            using (Graphics g = Graphics.FromImage(bmp))
+            {
+                g.SmoothingMode = SmoothingMode.AntiAlias;
+                g.TextRenderingHint = TextRenderingHint.AntiAliasGridFit;
+                g.Clear(Color.Transparent);
+                bool unknown = d == null || !d.Percent.HasValue;
+                Color fill = unknown ? Theme.Gray : Theme.BatteryColor(d.Percent, d.State);
+                Draw.FillRound(g, fill, new RectangleF(0, 0, size, size), size * 0.28f);
+                string text = unknown ? "--" : d.Percent.Value.ToString();
+                float fontSize = size * (text.Length >= 3 ? 0.46f : 0.60f);
+                using (Font f = new Font(Theme.Family, fontSize, FontStyle.Bold, GraphicsUnit.Pixel))
+                {
+                    TextRenderer.DrawText(g, text, f, new Rectangle(0, 0, size, size),
+                        Theme.OnAccent, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
+                }
+            }
+            return bmp;
         }
 
         /// <summary>渲染托盘图标位图（供 --icon-test 自检，不创建 HICON）。</summary>
