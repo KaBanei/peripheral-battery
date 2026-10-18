@@ -153,7 +153,14 @@ dist/app/              构建产物（PeripheralBattery.exe、BatteryProbe.exe�
 
 新增品牌支持请按 [docs/architecture.md](docs/architecture.md) 的六步实现一个 `IProvider`，并在 `ProviderRegistry` 注册。
 
+## 去掉 SmartScreen 警告 / 代码签名
+
+程序未签名时 Windows 会提示“发布者未知”。自己用可 `Unblock-File` 解除；对外分发建议购买 OV/EV 证书并用 `installer/sign.ps1` 签名，或走 Microsoft Store。完整方案与成本对比见 [docs/signing.md](docs/signing.md)。
+
 ## 更新日志
+
+### v1.3.1（2026-10-18）
+- 新增代码签名/去 SmartScreen 方案文档与脚本（`installer/sign.ps1`、`tools/unblock.ps1`）。
 
 ### v1.3.0（2026-10-18）
 - **整合“2.4G 无线外设电量检测通用方法”**：分层探测（标准 HID → 系统属性 → 厂商协议 → 通用识别）+ 数据驱动协议表；新增品牌只需填一条协议，不用改 Provider/UI。详见 [docs/generic-method.md](docs/generic-method.md)。
