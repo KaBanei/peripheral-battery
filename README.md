@@ -37,7 +37,7 @@
 | 标准 HID 电量（Usage 0x06/0x20） | 少数按规范上报的外设 | 百分比 | ⚠️ 2.4G dongle 极少暴露 |
 | Windows 蓝牙电量属性 | 已连接、系统能拿到电量的蓝牙设备（以 BLE 为主） | 百分比 | ✅ 本机实测可读到 BLE 设备 |
 | Xbox / XInput 手柄 | Xbox One / Series、兼容手柄 | 4 档 → 估 5/25/50/100 | ✅ 已实现（本机无手柄，负向路径已验证） |
-| VGN 2.4G（实验） | VGN 蜻蜓 F1 系鼠标（3554:F503）+ V98Pro V2 键盘（320F:5088） | 百分比 + 充电状态（鼠标另有电压） | ✅ 已实测 |
+| 厂商私有协议（实验） | 按协议表匹配（当前：VGN 蜻蜓 F1 鼠标 3554:F503、V98Pro V2 键盘 320F:5088） | 百分比 + 充电状态（鼠标另有电压） | ✅ 已实测 |
 | 通用外设识别 | 任意品牌的 2.4G / 无线 HID 键鼠（仅识别，不读电量） | 无（显示“未知”） | ✅ |
 | 模拟数据 | 演示与自检 | — | ✅ |
 
@@ -45,7 +45,7 @@
 
 > 换句话说：如果你用的是罗技（MX / G 系列）或蓝牙设备，大概率能直接看到电量；如果是雷蛇、VGN 这类，程序会把设备列出来并显示“未知电量”，你可以重命名成“我的鼠标”“VGN 键盘”来区分。部分接收器没有可读的电量协议，这是现实约束，不是程序坏了。
 >
-> 详细的支持矩阵与证据链接见 [docs/support-matrix.md](docs/support-matrix.md)，协议调研见 [docs/protocols.md](docs/protocols.md)。
+> 详细的支持矩阵与证据链接见 [docs/support-matrix.md](docs/support-matrix.md)，协议调研见 [docs/protocols.md](docs/protocols.md)；通用检测流程与新增品牌方法见 [docs/generic-method.md](docs/generic-method.md)。
 
 ## 快速开始
 
@@ -154,6 +154,11 @@ dist/app/              构建产物（PeripheralBattery.exe、BatteryProbe.exe�
 新增品牌支持请按 [docs/architecture.md](docs/architecture.md) 的六步实现一个 `IProvider`，并在 `ProviderRegistry` 注册。
 
 ## 更新日志
+
+### v1.3.0（2026-10-18）
+- **整合“2.4G 无线外设电量检测通用方法”**：分层探测（标准 HID → 系统属性 → 厂商协议 → 通用识别）+ 数据驱动协议表；新增品牌只需填一条协议，不用改 Provider/UI。详见 [docs/generic-method.md](docs/generic-method.md)。
+- VGN 鼠标/键盘协议改为表驱动（`VendorProtocolRegistry`），通用执行器 `VendorHidBatteryProvider` 自动匹配 VID/PID、控制集合与传输端点。
+- `BatteryProbe.exe --vendor` 新增“通道侦察”：列出厂商集合、匹配到的协议与实测读数。
 
 ### v1.2.0（2026-10-18）
 - **VGN V98Pro V2 键盘电量已支持**：通过 USBPcap 抓包确认必须走中断 OUT 端点（report 4 / 0x1A），此前用控制端点 SetOutputReport 设备不回应。实测 68%。

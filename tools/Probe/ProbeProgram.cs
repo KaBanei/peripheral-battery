@@ -38,6 +38,7 @@ namespace Pb.Tools
             bool dump = false;
             bool scan = false;
             bool selftest = false;
+            bool vendor = false;
             bool demo = true;
 
             foreach (string raw in args)
@@ -47,6 +48,7 @@ namespace Pb.Tools
                 {
                     case "--dump": dump = true; break;
                     case "--scan": scan = true; break;
+                    case "--vendor": vendor = true; break;
                     case "--selftest": selftest = true; break;
                     case "--json": _json = true; break;
                     case "--verbose": _verbose = true; break;
@@ -65,7 +67,7 @@ namespace Pb.Tools
                 }
             }
 
-            if (!dump && !scan && !selftest)
+            if (!dump && !scan && !selftest && !vendor)
             {
                 PrintHelp();
                 dump = true;
@@ -74,6 +76,7 @@ namespace Pb.Tools
             if (selftest) return RunSelfTest();
             if (dump) RunDump();
             if (scan) RunScan(demo);
+            if (vendor) RunVendor();
             return 0;
         }
 
@@ -85,6 +88,7 @@ namespace Pb.Tools
             Console.WriteLine();
             Console.WriteLine("  --dump      列出全部 HID 接口（VID:PID、usage、报告长度、产品名、feature usage、路径）");
             Console.WriteLine("  --scan      运行 罗技 HID++ / 标准 HID / 演示模式 三个 Provider，输出结果表");
+            Console.WriteLine("  --vendor    厂商私有协议通道侦察 + 匹配协议表（通用 2.4G 电量检测流程）");
             Console.WriteLine("  --selftest  HID++ 编解码 + 假接收器端到端自测（无需硬件），PASS/FAIL 汇总");
             Console.WriteLine("  --json      机器可读输出");
             Console.WriteLine("  --verbose   打印调试日志");
@@ -352,6 +356,67 @@ namespace Pb.Tools
                 case BatteryState.Wired: return "有线供电";
                 default: return "未知";
             }
+        }
+
+        // ============================ --vendor ============================
+        private static void RunVendor()
+        {
+            Console.WriteLine("== 厂商私有协议通道侦察 ==");
+            var bus = new HidBus(delegate(string m) { if (_verbose) Console.WriteLine("  [bus] " + m); });
+            List<HidInterface> all = bus.EnumerateFresh();
+            var order = new List<string>();
+            var groups = new Dictionary<string, List<HidInterface>>();
+            for (int i = 0; i < all.Count; i++)
+            {
+                HidInterface it = all[i];
+                string k = it.Vid.ToString("X4") + ":" + it.Pid.ToString("X4");
+                if (!groups.ContainsKey(k)) { groups[k] = new List<HidInterface>(); order.Add(k); }
+                groups[k].Add(it);
+            }
+            for (int g = 0; g < order.Count; g++)
+            {
+                string key = order[g];
+                List<HidInterface> list = groups[key];
+                bool interesting = false;
+                for (int i = 0; i < list.Count; i++)
+                {
+                    HidInterface it = list[i];
+                    if (it.UsagePage >= 0xFF00 || it.FeatureReportLen > 0 || it.OutputReportLen >= 16) { interesting = true; break; }
+                }
+                if (!interesting) continue;
+                Console.WriteLine(key + "  " + (list[0].Product ?? ""));
+                for (int i = 0; i < list.Count; i++)
+                {
+                    HidInterface it = list[i];
+                    if (it.UsagePage < 0xFF00 && it.FeatureReportLen == 0 && it.OutputReportLen < 16) continue;
+                    string match = "-";
+                    for (int k = 0; k < VendorProtocolRegistry.All.Length; k++)
+                    {
+                        if (VendorProtocolRegistry.All[k].Matches(it)) { match = VendorProtocolRegistry.All[k].Key; break; }
+                    }
+                    Console.WriteLine(string.Format("   usage={0:X4}:{1:X4} in/out/feat={2}/{3}/{4} match={5}",
+                        it.UsagePage, it.Usage, it.InputReportLen, it.OutputReportLen, it.FeatureReportLen, match));
+                }
+            }
+
+            var cfg = new AppConfig();
+            cfg.EnableDemo = false;
+            var provider = new VendorHidBatteryProvider(cfg, new AppContextAdapter(cfg));
+            try
+            {
+                List<Peripheral> found = provider.Scan(CancellationToken.None);
+                Console.WriteLine("");
+                Console.WriteLine("匹配协议并读到电量: " + found.Count + " 台");
+                for (int i = 0; i < found.Count; i++)
+                {
+                    Peripheral d = found[i];
+                    Console.WriteLine(string.Format("  {0}  {1}%  充电={2}  电压={3}  {4}",
+                        d.Name, d.Percent.HasValue ? d.Percent.Value.ToString() : "-",
+                        d.State == BatteryState.Charging ? "是" : "否",
+                        d.MilliVolts.HasValue ? d.MilliVolts.Value + "mV" : "-", d.Detail));
+                }
+            }
+            finally { provider.Dispose(); }
         }
 
         // ============================ --selftest ============================
