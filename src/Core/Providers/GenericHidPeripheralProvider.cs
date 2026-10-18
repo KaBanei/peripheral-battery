@@ -105,7 +105,9 @@ namespace Pb.Core.Providers
 
             // 通用识别只收“看起来是无线外设”的设备，避免把有线耳机、内置触控板等全部列出来
             string hint = (it.Product ?? "") + " " + (it.DeviceDesc ?? "") + " " + (it.Manufacturer ?? "");
-            return HasWirelessHint(hint);
+            if (HasWirelessHint(hint)) return true;
+            // 2.4G 音频 dongle 通常只暴露 consumer control + 厂商 HID，没有 wireless 字样
+            return IsAudioCandidate(it);
         }
 
         private sealed class Group
@@ -122,6 +124,8 @@ namespace Pb.Core.Providers
                 string product = first.Product ?? "";
                 string brand = BrandOf(product, first.Manufacturer);
                 string connection = Is24G(product) || Is24G(name) ? "2.4G" : "USB";
+                // 已知 2.4G 音频 dongle：花再 Halo Space D1（EDIFIER）
+                if (first.Vid == 0x2D99 && first.Pid == 0xE049) connection = "2.4G";
 
                 var p = new Peripheral();
                 p.Id = "generic:" + first.Vid.ToString("X4") + ":" + first.Pid.ToString("X4");
@@ -177,27 +181,39 @@ namespace Pb.Core.Providers
                 // 产品名优先（“VGN Mouse 2.4G Receiver” → 鼠标；“VGN V98pro V2 2.4G Dongle” → 看 usage）
                 if (Contains(products, "mouse") || Contains(products, "鼠标")) return DeviceKind.Mouse;
                 if (Contains(products, "keyboard") || Contains(products, "键盘")) return DeviceKind.Keyboard;
-                if (Contains(products, "headset") || Contains(products, "耳机")) return DeviceKind.Headset;
+                if (Contains(products, "headset") || Contains(products, "headphone") || Contains(products, "earbuds") || Contains(products, "耳机") || Contains(products, "耳麦")) return DeviceKind.Headset;
                 if (Contains(products, "gamepad") || Contains(products, "手柄") || Contains(products, "controller")) return DeviceKind.Gamepad;
 
-                bool mouse = false, keyboard = false, gamepad = false;
+                bool mouse = false, keyboard = false, gamepad = false, consumer = false;
                 for (int i = 0; i < Items.Count; i++)
                 {
                     HidInterface it = Items[i];
                     if (it.UsagePage == 0x0001 && it.Usage == 0x02) mouse = true;
                     if (it.UsagePage == 0x0001 && it.Usage == 0x06) keyboard = true;
                     if (it.UsagePage == 0x0001 && (it.Usage == 0x05 || it.Usage == 0x04)) gamepad = true;
+                    if (it.UsagePage == 0x000C && it.Usage == 0x0001) consumer = true;
                     if (it.Service == "mouhid") mouse = true;
                     if (it.Service == "kbdhid") keyboard = true;
                 }
                 if (keyboard) return DeviceKind.Keyboard;
                 if (mouse) return DeviceKind.Mouse;
                 if (gamepad) return DeviceKind.Gamepad;
+                if (consumer) return DeviceKind.Headset;
 
                 if (Contains(descs, "mouse") || Contains(descs, "鼠标")) return DeviceKind.Mouse;
                 if (Contains(descs, "keyboard") || Contains(descs, "键盘")) return DeviceKind.Keyboard;
                 return DeviceKind.Other;
             }
+        }
+
+        private static bool IsAudioCandidate(HidInterface it)
+        {
+            if (it == null) return false;
+            string text = (it.Product ?? "") + " " + (it.DeviceDesc ?? "") + " " + (it.Manufacturer ?? "");
+            if (Contains(text, "headset") || Contains(text, "headphone") || Contains(text, "earbuds")
+                || Contains(text, "耳机") || Contains(text, "耳麦")) return true;
+            // 花再 Halo Space D1 / EDIFIER 2.4G 音频 dongle
+            return it.Vid == 0x2D99 && it.Pid == 0xE049;
         }
 
         private static string Clean(string s)

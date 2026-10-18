@@ -27,6 +27,7 @@
 | Logitech | G915、G903 LIGHTSPEED、G502 X LIGHTSPEED 等 G 系列无线 | Lightspeed 2.4G | ✅ | 只实现 `0x1001` 电压，需按电压换算百分比 | [OpenLogi x1001](https://openlogi.org/hidpp/features/x1001-battery-voltage) |
 | Logitech | 老款 HID++ 1.0 Unifying 设备 | Unifying 2.4G | ⚠️ | 试寄存器 `0x07`/`0x0D`，能否读到取决于固件 | [Solaar hidpp10.py](https://github.com/pwr-Solaar/Solaar/blob/master/lib/logitech_receiver/hidpp10.py) |
 | Microsoft | Xbox One / Series 手柄、XInput 兼容第三方手柄 | USB / Xbox 无线适配器 / 蓝牙 | ✅ | 仅 4 档；有线手柄无电量（`Percent = null`） | [XInput 文档](https://learn.microsoft.com/en-us/windows/win32/api/xinput/ns-xinput-xinput_battery_information) |
+| 花再 Halo Space D1 | 2D99:E049（EDIFIER 2.4G 音频 dongle，HID consumer + FF13/FF14） | 2.4G | ⚠️ | 已识别为耳机；厂商未公开电量命令，显示未知 | 本项目实测 |
 | 任意（蓝牙） | BLE 鼠标/键盘/耳机/手机等 | 蓝牙 | ⚠️ | 系统蓝牙属性有值才显示；本机实测 BLE 设备（iPhone）可读 100% | [fastfetch 属性定义](https://github.com/fastfetch-cli/fastfetch/blob/dev/src/detection/bluetooth/bluetooth_windows.c) |
 | 任意（标准 HID） | 按 HID Usage 0x06/0x20 上报的设备 | USB / 2.4G | ⚠️ | 覆盖率低；私有 dongle 基本不暴露该 usage | [HID Usage Tables](https://www.usb.org/sites/default/files/hut1_4.pdf) |
 | Keychron | V6 Max 等 V Max 系列 | 蓝牙 | ⚠️ | 实测通过 GATT Battery Service 可被系统读到 | [实测博客](https://pmortensen.eu/world2/2024/11/04/the-battery-state-of-a-keychron-qmk-based-keyboard-can-be-displayed-in-the-operating-system/) |
