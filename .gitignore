@@ -1,0 +1,20 @@
+# build outputs
+dist/
+_build/
+_scratch/
+_artifacts/
+
+# runtime data (config/log), may be created next to the exe
+data/
+*.log
+
+# binaries
+*.exe
+*.dll
+*.pdb
+*.zip
+
+# misc
+*.user
+*.suo
+.vs/
