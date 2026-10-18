@@ -15,6 +15,8 @@ namespace Pb.App
         protected readonly RoundButton CloseButton;
         protected readonly RoundButton MinButton;
         protected bool ShowMinimizeButton;
+        /// <summary>是否允许拖动窗口边缘改变大小（无边框窗口用 WM_NCHITTEST 实现）。</summary>
+        protected bool Resizable;
 
         public ChromeForm(string title)
         {
@@ -51,6 +53,38 @@ namespace Pb.App
                 cp.ClassStyle |= Native.CS_DROPSHADOW;
                 return cp;
             }
+        }
+
+        private const int WM_NCHITTEST = 0x84;
+        private const int HTCLIENT = 1;
+
+        protected override void WndProc(ref Message m)
+        {
+            if (Resizable && m.Msg == WM_NCHITTEST && WindowState == FormWindowState.Normal)
+            {
+                base.WndProc(ref m);
+                if (m.Result.ToInt32() == HTCLIENT)
+                {
+                    int sx = (short)((long)m.LParam & 0xFFFF);
+                    int sy = (short)(((long)m.LParam >> 16) & 0xFFFF);
+                    Point p = PointToClient(new Point(sx, sy));
+                    int edge = Theme.S(this, 6);
+                    bool left = p.X <= edge;
+                    bool right = p.X >= ClientSize.Width - edge;
+                    bool top = p.Y <= edge;
+                    bool bottom = p.Y >= ClientSize.Height - edge;
+                    if (top && left) m.Result = (IntPtr)13;
+                    else if (top && right) m.Result = (IntPtr)14;
+                    else if (bottom && left) m.Result = (IntPtr)16;
+                    else if (bottom && right) m.Result = (IntPtr)17;
+                    else if (left) m.Result = (IntPtr)10;
+                    else if (right) m.Result = (IntPtr)11;
+                    else if (top) m.Result = (IntPtr)12;
+                    else if (bottom) m.Result = (IntPtr)15;
+                }
+                return;
+            }
+            base.WndProc(ref m);
         }
 
         protected override void OnResize(EventArgs e)

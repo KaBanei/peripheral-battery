@@ -34,6 +34,8 @@ namespace Pb.App
         private readonly Dictionary<string, string> _rawNames = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         private FlyoutForm _flyout;
         private MainForm _main;
+        private EdgeBarForm _edgeBar;
+        private bool _edgeMode;
         private bool _exiting;
         private bool _cleanupDone;
         private bool _startupDone;
@@ -254,6 +256,7 @@ namespace Pb.App
             UpdateTray();
             if (_flyout != null && !_flyout.IsDisposed) _flyout.SetData(_devices, _statuses, _at);
             if (_main != null && !_main.IsDisposed && _main.Visible) _main.SetData(_devices, _statuses, _at);
+            if (_edgeBar != null && !_edgeBar.IsDisposed) _edgeBar.SetData(_devices);
             CheckLowBattery();
         }
 
@@ -382,9 +385,15 @@ namespace Pb.App
             if (_exiting) return;
             try
             {
+                if (_edgeMode && _edgeBar != null && !_edgeBar.IsDisposed)
+                {
+                    _edgeBar.HideBar();
+                }
+                _edgeMode = false;
                 if (_main == null || _main.IsDisposed)
                 {
                     _main = new MainForm(_config);
+                    _main.MinimizeRequested += delegate { MinimizeToEdge(); };
                     _main.RefreshRequested += delegate
                     {
                         try { _host.RefreshNow(); } catch (Exception ex) { Log.Warn("刷新失败: " + ex.Message); }
@@ -407,6 +416,43 @@ namespace Pb.App
             {
                 Log.Error("显示主面板失败", ex);
             }
+        }
+
+        private void MinimizeToEdge()
+        {
+            if (_exiting || _main == null || _main.IsDisposed) return;
+            try
+            {
+                if (_flyout != null && !_flyout.IsDisposed) _flyout.Hide();
+                if (_edgeBar == null || _edgeBar.IsDisposed)
+                {
+                    _edgeBar = new EdgeBarForm();
+                    _edgeBar.RestoreRequested += delegate { RestoreFromEdge(); };
+                    _edgeBar.RefreshRequested += delegate
+                    {
+                        try { _host.RefreshNow(); } catch (Exception ex) { Log.Warn("刷新失败: " + ex.Message); }
+                    };
+                    _edgeBar.ExitRequested += delegate { ExitApp(); };
+                    _edgeBar.FormClosed += delegate { _edgeBar = null; };
+                }
+                Screen scr = Screen.FromControl(_main);
+                _edgeBar.SetData(_devices);
+                _edgeBar.ShowBar(scr);
+                _main.Hide();
+                _edgeMode = true;
+            }
+            catch (Exception ex)
+            {
+                Log.Error("最小化到侧边栏失败", ex);
+            }
+        }
+
+        private void RestoreFromEdge()
+        {
+            if (_exiting) return;
+            _edgeMode = false;
+            if (_edgeBar != null && !_edgeBar.IsDisposed) _edgeBar.HideBar();
+            ShowMain();
         }
 
         private void ShowSettings()
@@ -555,6 +601,7 @@ namespace Pb.App
             try { if (_host != null) { _host.Updated -= OnHostUpdated; _host.Dispose(); } } catch { }
             try { if (_flyout != null && !_flyout.IsDisposed) { _flyout.Hide(); _flyout.Dispose(); } } catch { }
             try { if (_main != null && !_main.IsDisposed) { _main.CloseForExit(); _main.Dispose(); } } catch { }
+            try { if (_edgeBar != null && !_edgeBar.IsDisposed) { _edgeBar.HideBar(); _edgeBar.Dispose(); } } catch { }
             try { if (_tray != null) _tray.Dispose(); } catch { }
             try { _icons.Dispose(); } catch { }
         }

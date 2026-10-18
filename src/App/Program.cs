@@ -25,6 +25,7 @@ namespace Pb.App
             bool demo = false;
             bool flyout = false;
             bool iconTest = false;
+            bool edgeTest = false;
             for (int i = 0; i < args.Length; i++)
             {
                 string a = (args[i] ?? "").Trim().ToLowerInvariant();
@@ -35,6 +36,7 @@ namespace Pb.App
                 else if (a == "--demo") demo = true;
                 else if (a == "--flyout") flyout = true;
                 else if (a == "--icon-test") iconTest = true;
+                else if (a == "--edge-test") edgeTest = true;
             }
 
             try
@@ -87,6 +89,12 @@ namespace Pb.App
                     return;
                 }
 
+                if (edgeTest)
+                {
+                    RunEdgeTest();
+                    return;
+                }
+
                 if (diagnose)
                 {
                     RunDiagnose(config);
@@ -99,6 +107,33 @@ namespace Pb.App
                     Application.Run(ctx);
                 }
             }
+        }
+
+        /// <summary>侧边栏预览（--edge-test）：用 4 台示例设备检查布局，不启动托盘。</summary>
+        private static void RunEdgeTest()
+        {
+            try
+            {
+            EdgeBarForm f = new EdgeBarForm();
+            List<Peripheral> list = new List<Peripheral>();
+            list.Add(MakeEdgeSample(DeviceKind.Mouse, "VGN 鼠标", 85, BatteryState.Discharging));
+            list.Add(MakeEdgeSample(DeviceKind.Keyboard, "VGN 键盘", 68, BatteryState.Discharging));
+            list.Add(MakeEdgeSample(DeviceKind.Headset, "耳机", 42, BatteryState.Discharging));
+            list.Add(MakeEdgeSample(DeviceKind.Gamepad, "手柄", 100, BatteryState.Full));
+            f.SetData(list);
+            f.ShowBar(Screen.PrimaryScreen);
+            Application.Run(f);
+            }
+            catch (Exception ex) { Log.Error("edge-test 失败", ex); }
+        }
+
+        private static Peripheral MakeEdgeSample(DeviceKind kind, string name, int percent, BatteryState state)
+        {
+            Peripheral d = MakeIconSample(kind, percent, state);
+            d.Name = name;
+            d.Id = name;
+            d.PhysicalId = name;
+            return d;
         }
 
         /// <summary>托盘图标自检：把 5 种状态渲染成一张放大图，便于无托盘环境核对。</summary>

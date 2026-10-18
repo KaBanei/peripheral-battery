@@ -37,6 +37,7 @@ namespace Pb.App
         private bool _exiting;
         private int _statusTitleY;
         private int _bottomTop;
+        private bool _initialSized;
         private readonly ContextMenuStrip _cardMenu;
         private DeviceCard _menuCard;
 
@@ -45,6 +46,7 @@ namespace Pb.App
         public event EventHandler ExitRequested;
         public delegate void RenameRequestDelegate(Peripheral device);
         public event RenameRequestDelegate RenameRequested;
+        public event EventHandler MinimizeRequested;
 
         /// <summary>设备稳定键：优先 Id，退化为 MergeKey。</summary>
         internal static string KeyOf(Peripheral d)
@@ -59,6 +61,7 @@ namespace Pb.App
             ShowInTaskbar = true;
             StartPosition = FormStartPosition.CenterScreen;
             ShowMinimizeButton = true;
+            Resizable = true;
             Icon = IconRenderer.AppIcon;
             KeyPreview = true;
 
@@ -107,7 +110,12 @@ namespace Pb.App
             };
             Controls.Add(_btnExit);
 
-            MinButton.Click += delegate { Hide(); };
+            MinButton.Click += delegate
+            {
+                EventHandler h = MinimizeRequested;
+                if (h != null) h(this, EventArgs.Empty);
+                else Hide();
+            };
 
             _cardMenu = new ContextMenuStrip();
             _cardMenu.Renderer = new DarkMenuRenderer();
@@ -168,6 +176,17 @@ namespace Pb.App
         protected override void OnLoad(EventArgs e)
         {
             base.OnLoad(e);
+            if (!_initialSized)
+            {
+                _initialSized = true;
+                float s0 = Theme.ScaleFactor(this);
+                ClientSize = new Size(
+                    (int)Math.Round(LogicalWidth * s0),
+                    (int)Math.Round(LogicalHeight * s0));
+                MinimumSize = new Size(
+                    (int)Math.Round(560 * s0),
+                    (int)Math.Round(540 * s0));
+            }
             if (_config != null && _config.VerboseLog)
             {
                 Log.Info("主面板布局: " + Theme.DpiDebug(this) + " client=" + ClientSize);
@@ -182,6 +201,16 @@ namespace Pb.App
         protected override void OnResize(EventArgs e)
         {
             base.OnResize(e);
+            if (WindowState == FormWindowState.Minimized)
+            {
+                EventHandler h = MinimizeRequested;
+                if (h != null)
+                {
+                    WindowState = FormWindowState.Normal;
+                    h(this, EventArgs.Empty);
+                    return;
+                }
+            }
             if (_list != null) Relayout();
         }
 
@@ -272,9 +301,9 @@ namespace Pb.App
         {
             if (!IsHandleCreated) return;
             float s = Theme.ScaleFactor(this);
-            int w = (int)Math.Round(LogicalWidth * s);
-            int h = (int)Math.Round(LogicalHeight * s);
-            ClientSize = new Size(w, h);
+            int w = ClientSize.Width;
+            int h = ClientSize.Height;
+            if (w <= 0 || h <= 0) return;
             LayoutChrome();
 
             int pad = (int)Math.Round(12 * s);
