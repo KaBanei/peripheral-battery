@@ -37,10 +37,21 @@ namespace Pb.App
         private bool _exiting;
         private int _statusTitleY;
         private int _bottomTop;
+        private readonly ContextMenuStrip _cardMenu;
+        private DeviceCard _menuCard;
 
         public event EventHandler RefreshRequested;
         public event EventHandler SettingsRequested;
         public event EventHandler ExitRequested;
+        public delegate void RenameRequestDelegate(Peripheral device);
+        public event RenameRequestDelegate RenameRequested;
+
+        /// <summary>设备稳定键：优先 Id，退化为 MergeKey。</summary>
+        internal static string KeyOf(Peripheral d)
+        {
+            if (d == null) return "";
+            return string.IsNullOrEmpty(d.Id) ? d.MergeKey : d.Id;
+        }
 
         public MainForm(AppConfig config) : base("2.4G 外设电量")
         {
@@ -97,6 +108,29 @@ namespace Pb.App
             Controls.Add(_btnExit);
 
             MinButton.Click += delegate { Hide(); };
+
+            _cardMenu = new ContextMenuStrip();
+            _cardMenu.Renderer = new DarkMenuRenderer();
+            _cardMenu.Font = Theme.FontBody;
+            _cardMenu.BackColor = Theme.Card;
+            _cardMenu.ForeColor = Theme.Text;
+            _cardMenu.ShowImageMargin = false;
+            ToolStripMenuItem miRename = new ToolStripMenuItem("重命名…");
+            miRename.Click += delegate
+            {
+                DeviceCard c = _menuCard;
+                if (c == null || c.Device == null) return;
+                RenameRequestDelegate h = RenameRequested;
+                if (h != null) h(c.Device);
+            };
+            _cardMenu.Items.Add(miRename);
+            _cardMenu.Opening += delegate
+            {
+                Point pt = _list.PointToClient(Cursor.Position);
+                _menuCard = _list.GetChildAtPoint(pt) as DeviceCard;
+                miRename.Enabled = _menuCard != null && _menuCard.Device != null
+                    && !string.IsNullOrEmpty(_menuCard.Device.Id);
+            };
 
             _toastTimer = new Timer();
             _toastTimer.Interval = 2600;
@@ -172,26 +206,28 @@ namespace Pb.App
             {
                 DeviceCard c = _cards[i];
                 if (c.Device == null) continue;
-                map[c.Device.MergeKey] = c;
+                map[KeyOf(c.Device)] = c;
             }
             List<DeviceCard> ordered = new List<DeviceCard>();
             for (int i = 0; i < _devices.Count; i++)
             {
                 Peripheral d = _devices[i];
+                string key = KeyOf(d);
                 DeviceCard c;
-                if (!map.TryGetValue(d.MergeKey, out c))
+                if (!map.TryGetValue(key, out c))
                 {
                     c = new DeviceCard(false);
                     c.Click += OnCardClick;
+                    c.RenameRequested += OnCardRename;
+                    c.ContextMenuStrip = _cardMenu;
                     _list.Controls.Add(c);
                 }
                 else
                 {
-                    c.Expanded = _expanded.Contains(d.MergeKey);
-                    map.Remove(d.MergeKey);
+                    map.Remove(key);
                 }
                 c.Device = d;
-                c.Expanded = _expanded.Contains(d.MergeKey);
+                c.Expanded = _expanded.Contains(key);
                 c.ShowChevron = true;
                 ordered.Add(c);
             }
@@ -211,12 +247,25 @@ namespace Pb.App
         private void OnCardClick(object sender, EventArgs e)
         {
             DeviceCard c = sender as DeviceCard;
+            if (c != null && c.Device != null && _config.VerboseLog)
+            {
+                Log.Info("卡片点击: " + c.Device.Name + " 当前展开=" + c.Expanded);
+            }
             if (c == null || c.Device == null) return;
-            string key = c.Device.MergeKey;
+            string key = KeyOf(c.Device);
             if (_expanded.Contains(key)) _expanded.Remove(key);
             else _expanded.Add(key);
             c.Expanded = _expanded.Contains(key);
-            RelayoutCards();
+            // 展开后卡片变高，需要重新计算列表可视高度，否则内容会被面板裁掉
+            Relayout();
+        }
+
+        private void OnCardRename(object sender, EventArgs e)
+        {
+            DeviceCard c = sender as DeviceCard;
+            if (c == null || c.Device == null) return;
+            RenameRequestDelegate h = RenameRequested;
+            if (h != null) h(c.Device);
         }
 
         private void Relayout()
@@ -232,7 +281,7 @@ namespace Pb.App
             int listX = pad;
             int listW = w - pad * 2;
             int statusH = StatusListView.PreferredHeight(s, _statuses.Count);
-            int maxStatus = (int)Math.Round(150 * s);
+            int maxStatus = (int)Math.Round(220 * s);
             if (statusH > maxStatus) statusH = maxStatus;
             int bottomTop = h - (int)Math.Round(BottomBarH * s);
             _bottomTop = bottomTop;
@@ -241,13 +290,11 @@ namespace Pb.App
             int listY = (int)Math.Round(ListY * s);
             int availList = bottomTop - (int)Math.Round(8 * s) - statusBlockH - (int)Math.Round(12 * s) - listY;
 
-            int collapsed = (int)Math.Round(DeviceCard.LargeHeight * s);
-            int expanded = (int)Math.Round(DeviceCard.LargeExpandedHeight * s);
             int cardGap = (int)Math.Round(10 * s);
             int contentH = 0;
             for (int i = 0; i < _cards.Count; i++)
             {
-                contentH += (_cards[i].Expanded ? expanded : collapsed) + cardGap;
+                contentH += (int)Math.Round(DeviceCard.HeightFor(_cards[i].Device, _cards[i].Expanded) * s) + cardGap;
             }
             if (contentH == 0) contentH = (int)Math.Round(150 * s);
 
@@ -286,13 +333,11 @@ namespace Pb.App
         {
             if (_list == null || !IsHandleCreated) return;
             float s = Theme.ScaleFactor(this);
-            int collapsed = (int)Math.Round(DeviceCard.LargeHeight * s);
-            int expanded = (int)Math.Round(DeviceCard.LargeExpandedHeight * s);
             int gap = (int)Math.Round(10 * s);
             int total = 0;
             for (int i = 0; i < _cards.Count; i++)
             {
-                total += (_cards[i].Expanded ? expanded : collapsed) + gap;
+                total += (int)Math.Round(DeviceCard.HeightFor(_cards[i].Device, _cards[i].Expanded) * s) + gap;
             }
             _list.ContentHeight = total + (int)Math.Round(8 * s);
             PositionCards();
@@ -302,15 +347,13 @@ namespace Pb.App
         {
             if (_list == null) return;
             float s = Theme.ScaleFactor(this);
-            int collapsed = (int)Math.Round(DeviceCard.LargeHeight * s);
-            int expanded = (int)Math.Round(DeviceCard.LargeExpandedHeight * s);
             int gap = (int)Math.Round(10 * s);
             int cardW = _list.ClientSize.Width - (int)Math.Round(12 * s);
             int y = 0;
             for (int i = 0; i < _cards.Count; i++)
             {
                 DeviceCard c = _cards[i];
-                int ch = c.Expanded ? expanded : collapsed;
+                int ch = (int)Math.Round(DeviceCard.HeightFor(c.Device, c.Expanded) * s);
                 c.Bounds = new Rectangle(0, y - _list.ScrollOffset, cardW, ch);
                 y += ch + gap;
             }

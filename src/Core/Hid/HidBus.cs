@@ -194,41 +194,63 @@ namespace Pb.Core.Hid
                 info.Service = HidNative.ReadEnumValue(instanceId, "Service");
 
                 // 只查询打开：即使设备被独占也能拿到属性/字符串
+                bool opened = false;
                 handle = HidNative.OpenDeviceQuery(path);
-                if (handle == HidNative.InvalidHandleValue || handle == IntPtr.Zero)
+                if (handle != HidNative.InvalidHandleValue && handle != IntPtr.Zero)
+                {
+                    opened = true;
+                }
+                else
                 {
                     handle = IntPtr.Zero;
-                    Log("HID 设备打不开（权限或独占），已跳过: " + path);
-                    return null;
+                    Log("HID 设备打不开（权限或独占），仅使用注册表信息: " + path);
                 }
 
-                var attributes = new HidNative.HIDD_ATTRIBUTES();
-                attributes.Size = HidNative.AttributesSize;
-                if (HidNative.HidD_GetAttributes(handle, ref attributes))
+                if (opened)
                 {
-                    info.Vid = attributes.VendorID;
-                    info.Pid = attributes.ProductID;
-                    info.Version = attributes.VersionNumber;
-                }
-
-                info.Product = HidNative.GetProductString(handle);
-                info.Manufacturer = HidNative.GetManufacturerString(handle);
-                info.Serial = HidNative.GetSerialNumberString(handle);
-
-                if (HidNative.HidD_GetPreparsedData(handle, ref preparsed))
-                {
-                    var caps = new HidNative.HIDP_CAPS();
-                    if (HidNative.HidP_GetCaps(preparsed, ref caps) == HidNative.HIDP_STATUS_SUCCESS)
+                    var attributes = new HidNative.HIDD_ATTRIBUTES();
+                    attributes.Size = HidNative.AttributesSize;
+                    if (HidNative.HidD_GetAttributes(handle, ref attributes))
                     {
-                        info.UsagePage = caps.UsagePage;
-                        info.Usage = caps.Usage;
-                        info.InputReportLen = caps.InputReportByteLength;
-                        info.OutputReportLen = caps.OutputReportByteLength;
-                        info.FeatureReportLen = caps.FeatureReportByteLength;
-                        info.FeatureUsages = HidNative.ReadValueCaps(preparsed, HidNative.HIDP_FEATURE,
-                            caps.NumberFeatureValueCaps);
-                        info.InputUsages = HidNative.ReadValueCaps(preparsed, HidNative.HIDP_INPUT,
-                            caps.NumberInputValueCaps);
+                        info.Vid = attributes.VendorID;
+                        info.Pid = attributes.ProductID;
+                        info.Version = attributes.VersionNumber;
+                    }
+
+                    info.Product = HidNative.GetProductString(handle);
+                    info.Manufacturer = HidNative.GetManufacturerString(handle);
+                    info.Serial = HidNative.GetSerialNumberString(handle);
+
+                    if (HidNative.HidD_GetPreparsedData(handle, ref preparsed))
+                    {
+                        var caps = new HidNative.HIDP_CAPS();
+                        if (HidNative.HidP_GetCaps(preparsed, ref caps) == HidNative.HIDP_STATUS_SUCCESS)
+                        {
+                            info.UsagePage = caps.UsagePage;
+                            info.Usage = caps.Usage;
+                            info.InputReportLen = caps.InputReportByteLength;
+                            info.OutputReportLen = caps.OutputReportByteLength;
+                            info.FeatureReportLen = caps.FeatureReportByteLength;
+                            info.FeatureUsages = HidNative.ReadValueCaps(preparsed, HidNative.HIDP_FEATURE,
+                                caps.NumberFeatureValueCaps);
+                            info.InputUsages = HidNative.ReadValueCaps(preparsed, HidNative.HIDP_INPUT,
+                                caps.NumberInputValueCaps);
+                        }
+                    }
+                }
+                else
+                {
+                    int vid;
+                    int pid;
+                    if (TryParseVidPid(instanceId, out vid, out pid))
+                    {
+                        info.Vid = vid;
+                        info.Pid = pid;
+                    }
+                    else
+                    {
+                        // 没有 VID/PID 的节点（虚拟总线等）不参与设备列表
+                        return null;
                     }
                 }
 
@@ -245,6 +267,20 @@ namespace Pb.Core.Hid
                 if (detail != IntPtr.Zero) Marshal.FreeHGlobal(detail);
                 if (devInfoPtr != IntPtr.Zero) Marshal.FreeHGlobal(devInfoPtr);
             }
+        }
+
+        private static bool TryParseVidPid(string instanceId, out int vid, out int pid)
+        {
+            vid = 0;
+            pid = 0;
+            if (string.IsNullOrEmpty(instanceId)) return false;
+            int vi = instanceId.IndexOf("VID_", StringComparison.OrdinalIgnoreCase);
+            int pi = instanceId.IndexOf("PID_", StringComparison.OrdinalIgnoreCase);
+            if (vi < 0 || pi < 0) return false;
+            if (vi + 8 > instanceId.Length || pi + 8 > instanceId.Length) return false;
+            if (!int.TryParse(instanceId.Substring(vi + 4, 4), System.Globalization.NumberStyles.HexNumber, null, out vid)) return false;
+            if (!int.TryParse(instanceId.Substring(pi + 4, 4), System.Globalization.NumberStyles.HexNumber, null, out pid)) return false;
+            return vid != 0 || pid != 0;
         }
 
         private static void CacheParent(string instanceId)

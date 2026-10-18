@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows.Forms;
@@ -12,7 +13,22 @@ namespace Pb.App
     internal static class AppInfo
     {
         public const string Name = "2.4G 外设电量";
-        public const string Version = "1.0.0";
+        public static readonly string Version = DetectVersion();
+
+        private static string DetectVersion()
+        {
+            try
+            {
+                Assembly asm = Assembly.GetEntryAssembly();
+                if (asm != null)
+                {
+                    Version v = asm.GetName().Version;
+                    if (v != null) return v.Major + "." + v.Minor + "." + v.Build;
+                }
+            }
+            catch { }
+            return "1.1.0";
+        }
     }
 
     /// <summary>UI 线程调度 + 淡入。后台线程只通过这里回主线程。</summary>

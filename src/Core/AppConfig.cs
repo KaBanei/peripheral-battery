@@ -21,6 +21,8 @@ namespace Pb.Core
         public bool EnableDemo { get; set; }
         public bool VerboseLog { get; set; }
         public bool HasCompletedFirstRun { get; set; }
+        /// <summary>用户自定义名称（key = Peripheral.Id，value ≤20 字）。</summary>
+        public Dictionary<string, string> CustomNames { get; set; }
 
         public AppConfig()
         {
@@ -37,6 +39,26 @@ namespace Pb.Core
             EnableDemo = false;
             VerboseLog = false;
             HasCompletedFirstRun = false;
+            CustomNames = new Dictionary<string, string>();
+        }
+
+        public string GetCustomName(string deviceId)
+        {
+            if (string.IsNullOrEmpty(deviceId) || CustomNames == null) return null;
+            string name;
+            return CustomNames.TryGetValue(deviceId, out name) ? name : null;
+        }
+
+        /// <summary>设置自定义名称；空字符串表示恢复默认。返回 false 表示名称超长。</summary>
+        public bool SetCustomName(string deviceId, string name)
+        {
+            if (string.IsNullOrEmpty(deviceId)) return false;
+            if (CustomNames == null) CustomNames = new Dictionary<string, string>();
+            name = (name ?? "").Trim();
+            if (name.Length == 0) { CustomNames.Remove(deviceId); return true; }
+            if (name.Length > 20) return false;
+            CustomNames[deviceId] = name;
+            return true;
         }
 
         private static string _dataDir;
@@ -100,6 +122,14 @@ namespace Pb.Core
             if (LowBatteryThreshold < 1) LowBatteryThreshold = 1;
             if (LowBatteryThreshold > 90) LowBatteryThreshold = 90;
             if (TrayDisplay != "average" && TrayDisplay != "highest") TrayDisplay = "worst";
+            if (CustomNames == null) CustomNames = new Dictionary<string, string>();
+            var bad = new List<string>();
+            foreach (var kv in CustomNames)
+            {
+                if (string.IsNullOrEmpty(kv.Key) || string.IsNullOrEmpty(kv.Value) || kv.Value.Trim().Length == 0 || kv.Value.Trim().Length > 20)
+                    bad.Add(kv.Key);
+            }
+            for (int i = 0; i < bad.Count; i++) CustomNames.Remove(bad[i]);
             return this;
         }
 

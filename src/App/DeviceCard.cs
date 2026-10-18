@@ -12,10 +12,23 @@ namespace Pb.App
         public const int CompactHeight = 66;
         public const int CompactPitch = 74;
         public const int LargeHeight = 92;
-        public const int LargeExpandedHeight = 246;
+        public const int LargeExpandedHeight = 292;
+        public const int GenericNoteHeight = 32;
 
         private readonly bool _compact;
         private bool _hover;
+        private bool _hoverRename;
+        private bool _suppressClick;
+
+        /// <summary>卡片高度（96 DPI 逻辑像素）：通用设备展开时多一行说明。</summary>
+        public static int HeightFor(Peripheral d, bool expanded)
+        {
+            if (!expanded) return LargeHeight;
+            return LargeExpandedHeight + ((d != null && d.IsGeneric) ? GenericNoteHeight : 0);
+        }
+
+        /// <summary>点击“重命名”按钮。</summary>
+        public event EventHandler RenameRequested;
 
         public DeviceCard(bool compact)
         {
@@ -42,7 +55,37 @@ namespace Pb.App
         }
 
         protected override void OnMouseEnter(EventArgs e) { _hover = true; Invalidate(); base.OnMouseEnter(e); }
-        protected override void OnMouseLeave(EventArgs e) { _hover = false; Invalidate(); base.OnMouseLeave(e); }
+        protected override void OnMouseLeave(EventArgs e) { _hover = false; _hoverRename = false; Invalidate(); base.OnMouseLeave(e); }
+
+        protected override void OnMouseMove(MouseEventArgs e)
+        {
+            bool hov = Expanded && !_compact && RenameButtonRect(Width, Height).Contains(e.Location);
+            if (hov != _hoverRename) { _hoverRename = hov; Invalidate(); }
+            base.OnMouseMove(e);
+        }
+
+        protected override void OnMouseDown(MouseEventArgs e)
+        {
+            base.OnMouseDown(e);
+            if (e.Button != MouseButtons.Left) return;
+            if (Expanded && !_compact && RenameButtonRect(Width, Height).Contains(e.Location))
+            {
+                _suppressClick = true;
+                EventHandler h = RenameRequested;
+                if (h != null) h(this, EventArgs.Empty);
+            }
+        }
+
+        protected override void OnClick(EventArgs e)
+        {
+            if (_suppressClick) { _suppressClick = false; return; }
+            base.OnClick(e);
+        }
+
+        private Rectangle RenameButtonRect(int w, int h)
+        {
+            return new Rectangle(w - S(14) - S(104), h - S(44), S(104), S(30));
+        }
 
         protected override void OnPaint(PaintEventArgs e)
         {
@@ -192,7 +235,20 @@ namespace Pb.App
 
             Draw.TLeft(g, "HID 路径", Theme.FontSmall, Theme.Sub, new Rectangle(col1, y, labelW + S(30), S(18)), false);
             string path = string.IsNullOrEmpty(d.DevicePath) ? "（无）" : d.DevicePath;
-            Draw.TWrap(g, path, Theme.FontSub, Theme.Text, new Rectangle(col1, y + S(16), contentW, S(34)));
+            Draw.TWrap(g, path, Theme.FontSub, Theme.Text, new Rectangle(col1, y + S(16), contentW, S(32)));
+
+            if (d.IsGeneric)
+            {
+                Draw.TLeft(g, "该设备未暴露电量协议，仅识别到设备；可重命名便于区分。", Theme.FontSmall, Theme.Sub,
+                    new Rectangle(col1, y + S(52), contentW, S(30)), true);
+            }
+
+            Rectangle btn = RenameButtonRect(w, h);
+            Color btnBg = _hoverRename ? Theme.CardHover : Theme.Field;
+            Draw.FillRound(g, btnBg, new RectangleF(btn.X, btn.Y, btn.Width, btn.Height), SF(8f));
+            Draw.StrokeRound(g, _hoverRename ? Theme.Accent : Theme.Border,
+                new RectangleF(btn.X + 0.5f, btn.Y + 0.5f, btn.Width - 1f, btn.Height - 1f), SF(8f), 1f);
+            Draw.TCenter(g, "重命名", Theme.FontBody, _hoverRename ? Theme.Accent : Theme.Text, btn);
         }
 
         private void Detail(Graphics g, int x, int y, int labelW, int valueW, string label, string value)

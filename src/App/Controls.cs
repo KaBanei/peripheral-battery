@@ -711,23 +711,89 @@ namespace Pb.App
             ClampOffset();
         }
 
-        protected override void OnPaint(PaintEventArgs e)
+        private Rectangle ThumbRect()
         {
-            base.OnPaint(e);
-            if (_contentHeight <= ClientSize.Height) return;
-            Graphics g = e.Graphics;
-            g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+            if (_contentHeight <= ClientSize.Height) return Rectangle.Empty;
             int trackTop = Theme.S(this, 4);
             int trackH = Height - Theme.S(this, 8);
-            if (trackH <= 8) return;
-            int thumbH = (int)Math.Round((double)trackH * Height / _contentHeight);
+            if (trackH <= 8) return Rectangle.Empty;
+            int thumbH = (int)Math.Round((double)trackH * Height / Math.Max(1, _contentHeight));
             if (thumbH < Theme.S(this, 28)) thumbH = Theme.S(this, 28);
+            if (thumbH > trackH) thumbH = trackH;
             int max = MaxOffset;
             int thumbY = trackTop;
             if (max > 0) thumbY = trackTop + (int)Math.Round((double)(trackH - thumbH) * _offset / max);
             int barW = Theme.S(this, 4);
-            Draw.FillRound(g, Color.FromArgb(120, Theme.Sub),
-                new RectangleF(Width - barW - Theme.S(this, 2), thumbY, barW, thumbH), barW / 2f);
+            return new Rectangle(Width - barW - Theme.S(this, 2), thumbY, barW, thumbH);
+        }
+
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            base.OnPaint(e);
+            Rectangle thumb = ThumbRect();
+            if (thumb.IsEmpty) return;
+            Graphics g = e.Graphics;
+            g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+            Draw.FillRound(g, Color.FromArgb(_dragging ? 190 : 120, Theme.Sub),
+                new RectangleF(thumb.X, thumb.Y, thumb.Width, thumb.Height), thumb.Width / 2f);
+        }
+
+        protected override void OnMouseWheel(MouseEventArgs e)
+        {
+            ScrollBy(-e.Delta);
+            base.OnMouseWheel(e);
+        }
+
+        private bool _dragging;
+        private int _dragY;
+        private int _dragOffset;
+
+        protected override void OnMouseDown(MouseEventArgs e)
+        {
+            base.OnMouseDown(e);
+            if (e.Button != MouseButtons.Left) return;
+            if (MaxOffset <= 0) return;
+            Rectangle thumb = ThumbRect();
+            if (thumb.IsEmpty) return;
+            if (e.X >= Width - Theme.S(this, 14))
+            {
+                _dragging = true;
+                _dragY = e.Y;
+                _dragOffset = _offset;
+                Capture = true;
+                Invalidate();
+            }
+        }
+
+        protected override void OnMouseMove(MouseEventArgs e)
+        {
+            base.OnMouseMove(e);
+            if (!_dragging) return;
+            Rectangle thumb = ThumbRect();
+            int trackTop = Theme.S(this, 4);
+            int trackH = Height - Theme.S(this, 8);
+            int travel = trackH - thumb.Height;
+            if (travel <= 0) return;
+            int dy = e.Y - _dragY;
+            int target = _dragOffset + (int)Math.Round((double)dy * MaxOffset / travel);
+            if (target < 0) target = 0;
+            if (target > MaxOffset) target = MaxOffset;
+            if (target == _offset) return;
+            _offset = target;
+            Invalidate();
+            EventHandler h = ScrollChanged;
+            if (h != null) h(this, EventArgs.Empty);
+        }
+
+        protected override void OnMouseUp(MouseEventArgs e)
+        {
+            if (_dragging)
+            {
+                _dragging = false;
+                Capture = false;
+                Invalidate();
+            }
+            base.OnMouseUp(e);
         }
     }
 

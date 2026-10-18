@@ -65,7 +65,8 @@ namespace Pb.App
                 "罗技 HID++ 设备（MX / G 系列 2.4G 接收器）",
                 "标准 HID 电量（Usage Page 0x06）",
                 "蓝牙低功耗设备（读取系统电量属性）",
-                "Xbox 无线手柄（XInput 电量等级）"
+                "Xbox 无线手柄（XInput 电量等级）",
+                "其它品牌也会列出（电量未知），可自行重命名"
             });
             y = Block(g, x, y + S(20), w, "已知限制", new string[]
             {

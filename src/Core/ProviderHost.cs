@@ -134,7 +134,7 @@ namespace Pb.Core
                 statuses.Add(st);
             }
 
-            var merged = Merge(found);
+            var merged = ApplyOverrides(Merge(found));
             lock (_sync)
             {
                 _devices = merged;
@@ -149,6 +149,32 @@ namespace Pb.Core
                 }
                 catch (Exception ex) { Log.Error("UI 更新回调异常", ex); }
             }
+        }
+
+        /// <summary>
+        /// 去重与用户改名：专用 Provider 已识别的同一物理设备，不再重复显示通用条目；
+        /// 最后把用户自定义名称覆盖到显示名上。
+        /// </summary>
+        private List<Peripheral> ApplyOverrides(List<Peripheral> devices)
+        {
+            var covered = new HashSet<string>();
+            for (int i = 0; i < devices.Count; i++)
+            {
+                Peripheral d = devices[i];
+                if (!d.IsGeneric && d.Vid != 0)
+                    covered.Add(d.Vid.ToString("X4") + ":" + d.Pid.ToString("X4"));
+            }
+            var result = new List<Peripheral>();
+            for (int i = 0; i < devices.Count; i++)
+            {
+                Peripheral d = devices[i];
+                if (d.IsGeneric && d.Vid != 0 && covered.Contains(d.Vid.ToString("X4") + ":" + d.Pid.ToString("X4")))
+                    continue;
+                string custom = _config.GetCustomName(d.Id);
+                if (!string.IsNullOrEmpty(custom)) d.Name = custom;
+                result.Add(d);
+            }
+            return result;
         }
 
         private static List<Peripheral> Merge(List<Peripheral> found)

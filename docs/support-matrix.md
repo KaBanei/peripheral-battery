@@ -12,7 +12,10 @@
 | 标准 HID 电量 | 按 Usage 0x06/0x20 上报的设备 | 百分比 | 设备暴露 feature/input report | `StandardHidBatteryProvider` |
 | Windows 蓝牙属性 | 已连接且系统能拿到电量的蓝牙设备（以 BLE 为主） | 百分比 | 蓝牙已配对并连接 | `BluetoothBatteryProvider` |
 | XInput | Xbox 兼容手柄（USB / 无线适配器 / 蓝牙） | 4 档 → 估 5/25/50/100 | 系统有 xinput1_4/1_3.dll | `XInputBatteryProvider` |
+| 通用外设识别 | 任意品牌的 2.4G / 无线 HID 键鼠、手柄（按名称含 2.4G/Wireless/Dongle/Receiver 识别） | 无（只显示“未知”） | 无需协议 | `GenericHidPeripheralProvider` |
 | 模拟数据 | 演示/自检 | 任意 | 配置开启 | `SimulationProvider` |
+
+> **通用识别（新增）**：即使品牌没有公开协议，设备也会以“鼠标/键盘/耳机/手柄”类别出现在列表里，电量显示“未知”；同一 `VID:PID` 的接收器会合并为一条记录，可以用“重命名”（≤20 字）自定义显示名，方便区分。它不改变“能不能读到电量”的结论。
 
 ## 2. 品牌 / 系列支持状态
 
@@ -26,11 +29,11 @@
 | 任意（标准 HID） | 按 HID Usage 0x06/0x20 上报的设备 | USB / 2.4G | ⚠️ | 覆盖率低；私有 dongle 基本不暴露该 usage | [HID Usage Tables](https://www.usb.org/sites/default/files/hut1_4.pdf) |
 | Keychron | V6 Max 等 V Max 系列 | 蓝牙 | ⚠️ | 实测通过 GATT Battery Service 可被系统读到 | [实测博客](https://pmortensen.eu/world2/2024/11/04/the-battery-state-of-a-keychron-qmk-based-keyboard-can-be-displayed-in-the-operating-system/) |
 | Keychron | K5 Pro 等同代型号 | 蓝牙 / 2.4G | ❌ | 同测试中未暴露电量服务；2.4G 模式无系统属性 | 同上 |
-| Razer | 无线鼠标/键盘 | 2.4G HyperSpeed | ❌ | 私有 HID 控制传输，需逐型号逆向；本项目不实现 | [OpenRazer](https://github.com/openrazer/openrazer) |
-| SteelSeries | 无线耳机/鼠标 | 2.4G | ❌ | 仅官方 GG 暴露电量，无公开协议 | [SteelSeries GG](https://steelseries.com/gg) |
-| Corsair | 无线耳机/鼠标 | 2.4G | ❌ | 仅官方 iCUE，协议闭源 | [iCUE](https://www.corsair.com/us/en/s/icue) |
-| HyperX | Cloud 系列无线耳机等 | 2.4G | ❌ | 仅官方 NGENUITY，无公开协议 | [NGENUITY](https://hyperx.com/pages/ngenuity) |
-| VGN | 无线鼠标/键盘 | 2.4G | ❌ | 仅官方 VGN HUB，无公开协议 | [VGN 官网](https://www.vgnlab.com.cn/) |
+| Razer | 无线鼠标/键盘 | 2.4G HyperSpeed | ❌（仅识别） | 私有 HID 控制传输，需逐型号逆向；本项目不实现，仅按通用识别列出（电量未知） | [OpenRazer](https://github.com/openrazer/openrazer) |
+| SteelSeries | 无线耳机/鼠标 | 2.4G | ❌（仅识别） | 仅官方 GG 暴露电量；通用识别可列出设备（电量未知） | [SteelSeries GG](https://steelseries.com/gg) |
+| Corsair | 无线耳机/鼠标 | 2.4G | ❌（仅识别） | 仅官方 iCUE，协议闭源；通用识别可列出设备（电量未知） | [iCUE](https://www.corsair.com/us/en/s/icue) |
+| HyperX | Cloud 系列无线耳机等 | 2.4G | ❌（仅识别） | 仅官方 NGENUITY；通用识别可列出设备（电量未知） | [NGENUITY](https://hyperx.com/pages/ngenuity) |
+| VGN | 无线鼠标/键盘 | 2.4G | ❌（仅识别） | 仅官方 VGN HUB；本机实测 3554:F503 / 320F:5088 可被通用识别列出（电量未知），可重命名 | [VGN 官网](https://www.vgnlab.com.cn/) |
 | Apple / Sony / Bose / Jabra 等 | BLE 耳机、鼠标、键盘 | 蓝牙 | ⚠️ | 若厂商实现 GATT Battery Service（0x2A19）则可能被系统读到；否则读不到 | [Keychron 实测（说明机制）](https://pmortensen.eu/world2/2024/11/04/the-battery-state-of-a-keychron-qmk-based-keyboard-can-be-displayed-in-the-operating-system/) |
 
 ## 3. 明确不做的事

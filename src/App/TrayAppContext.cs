@@ -31,6 +31,7 @@ namespace Pb.App
         private DateTime _at;
 
         private readonly HashSet<string> _alerted = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, string> _rawNames = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         private FlyoutForm _flyout;
         private MainForm _main;
         private bool _exiting;
@@ -240,6 +241,16 @@ namespace Pb.App
             _devices = devices;
             _statuses = providers;
             _at = at;
+            // 记录未改名设备的原始名称，供“恢复默认”立即显示
+            for (int i = 0; i < devices.Count; i++)
+            {
+                Peripheral d = devices[i];
+                if (d == null || string.IsNullOrEmpty(d.Id)) continue;
+                if (string.IsNullOrEmpty(_config.GetCustomName(d.Id)) && !string.IsNullOrEmpty(d.Name))
+                {
+                    _rawNames[d.Id] = d.Name;
+                }
+            }
             UpdateTray();
             if (_flyout != null && !_flyout.IsDisposed) _flyout.SetData(_devices, _statuses, _at);
             if (_main != null && !_main.IsDisposed && _main.Visible) _main.SetData(_devices, _statuses, _at);
@@ -379,6 +390,7 @@ namespace Pb.App
                         try { _host.RefreshNow(); } catch (Exception ex) { Log.Warn("刷新失败: " + ex.Message); }
                     };
                     _main.SettingsRequested += delegate { ShowSettings(); };
+                    _main.RenameRequested += delegate(Peripheral d) { ShowRenameDialog(d); };
                     _main.ExitRequested += delegate { ExitApp(); };
                     _main.FormClosed += delegate { _main = null; };
                 }
@@ -421,6 +433,58 @@ namespace Pb.App
             catch (Exception ex)
             {
                 Log.Error("显示设置失败", ex);
+            }
+        }
+
+        /// <summary>设备的原始（Provider 提供的）名称。</summary>
+        private string RawNameOf(Peripheral d)
+        {
+            if (d == null) return "";
+            string raw;
+            if (!string.IsNullOrEmpty(d.Id) && _rawNames.TryGetValue(d.Id, out raw) && !string.IsNullOrEmpty(raw))
+                return raw;
+            return d.Name == null ? "" : d.Name;
+        }
+
+        /// <summary>重命名设备：写配置后立即刷新主面板/悬浮面板/托盘。</summary>
+        private void ShowRenameDialog(Peripheral d)
+        {
+            if (_exiting || d == null) return;
+            try
+            {
+                Log.Info("RENAME open: name=" + d.Name + " id=" + d.Id + " raw=" + RawNameOf(d));
+                bool rawKnown = !string.IsNullOrEmpty(d.Id) && _rawNames.ContainsKey(d.Id);
+                using (RenameForm f = new RenameForm(_config, d, RawNameOf(d), rawKnown))
+                {
+                    DialogResult r = f.ShowDialog();
+                    string applied = f.AppliedName == null ? "" : f.AppliedName;
+                    Log.Info("RENAME result: " + r + " applied=[" + applied + "]");
+                    if (r != DialogResult.OK) return;
+                    if (applied.Length > 0)
+                    {
+                        d.Name = applied;
+                    }
+                    else
+                    {
+                        string raw;
+                        if (!string.IsNullOrEmpty(d.Id) && _rawNames.TryGetValue(d.Id, out raw) && !string.IsNullOrEmpty(raw))
+                        {
+                            d.Name = raw;
+                        }
+                        else
+                        {
+                            // 原始名称未知：立刻重扫，下一轮更新会带回 Provider 名称
+                            try { _host.RefreshNow(); } catch { }
+                        }
+                    }
+                    UpdateTray();
+                    if (_main != null && !_main.IsDisposed) _main.SetData(_devices, _statuses, _at);
+                    if (_flyout != null && !_flyout.IsDisposed) _flyout.SetData(_devices, _statuses, _at);
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Error("重命名失败", ex);
             }
         }
 

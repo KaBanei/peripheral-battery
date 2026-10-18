@@ -46,6 +46,10 @@ namespace Pb.Core
         public int Pid { get; set; }
         public DateTime Updated { get; set; }
         public bool Simulated { get; set; }
+        /// <summary>true = 仅识别到设备但读不到电量（通用外设兜底）。</summary>
+        public bool IsGeneric { get; set; }
+        /// <summary>物理设备标识（接收器/实例），用于跨数据源去重。</summary>
+        public string PhysicalId { get; set; }
 
         public string MergeKey
         {
