@@ -51,6 +51,8 @@ SignPath 为开源项目提供免费的代码签名服务（证书由 Sectigo/Si
 
 ### 5. 发版
 
+> 当前仓库在 SignPath 配置完成前，`release-sign.yml` 只保留 `workflow_dispatch`（tag 触发已注释）。配好 Secret 后取消注释，再打 tag 即可自动签名。
+
 仓库里已经准备好 `.github/workflows/release-sign.yml`：
 
 `bash

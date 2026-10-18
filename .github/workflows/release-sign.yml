@@ -12,9 +12,10 @@ name: release-sign
 # See docs/opensource-signing.md for the full setup.
 
 on:
-  push:
-    tags: [ 'v*' ]
   workflow_dispatch:
+  # Tag-triggered signing is enabled after SignPath secrets are configured.
+  # push:
+  #   tags: [ 'v*' ]
 
 permissions:
   contents: write
