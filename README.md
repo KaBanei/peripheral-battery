@@ -155,6 +155,9 @@ dist/app/              构建产物（PeripheralBattery.exe、BatteryProbe.exe�
 
 ## 更新日志
 
+### v1.1.2（2026-10-18）
+- 修正 VgnProbe 键盘通道：改用 VHUB 实际使用的 COL04（FF1C:0092）/ report 4（之前发到了 COL05/report 5，所以键盘日志没有回包）。
+
 ### v1.1.1（2026-10-18）
 - 新增 VGN 2.4G 鼠标实验性电量读取：逆向 VGN VHUB 的 WebHID 私有协议（output report 8 + PCDriverStatus 握手 + 电池命令 0x04），本机实测 90% / 4059mV 正常显示。
 - 附带 VgnProbe.exe 诊断工具：持续移动/敲击设备时抓取 VGN 私有协议日志，用于继续适配键盘等型号。

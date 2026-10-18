@@ -58,7 +58,8 @@ internal static class VgnProbeProgram
                 it.Vid, it.Pid, it.UsagePage, it.Usage, it.InputReportLen, it.OutputReportLen, it.FeatureReportLen, it.Service));
             L("   " + it.InstanceId);
             if (it.Vid == 0x3554 && it.Pid == 0xF503 && it.UsagePage == 0xFF02 && it.OutputReportLen >= 16) mouseCtrl = it;
-            if (it.Vid == 0x320F && it.Pid == 0x5088 && it.UsagePage == 0xFFEF && it.OutputReportLen >= 60) kbdCtrl = it;
+            if (it.Vid == 0x320F && it.Pid == 0x5088 && it.UsagePage == 0xFF1C && it.OutputReportLen >= 60) kbdCtrl = it;
+            else if (it.Vid == 0x320F && it.Pid == 0x5088 && it.UsagePage == 0xFFEF && it.OutputReportLen >= 60 && kbdCtrl == null) kbdCtrl = it;
         }
         L("");
         L("mouseCtrl=" + (mouseCtrl == null ? "未找到" : mouseCtrl.InstanceId));
@@ -144,7 +145,8 @@ internal static class VgnProbeProgram
     private static void SendKeyboard(IHidChannel ch)
     {
         byte[] buf = new byte[64];
-        buf[0] = 5;
+        // VHUB 的 WsServe 走 COL04（FF1C:0092）/ report 4，数据为 [0,0,cmd,6,...]
+        buf[0] = 4;
         buf[1] = 0;
         buf[2] = 0;
         buf[3] = 5;

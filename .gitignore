@@ -3,6 +3,7 @@ dist/
 _build/
 _scratch/
 _artifacts/
+_ref/
 
 # runtime data (config/log), may be created next to the exe
 data/
