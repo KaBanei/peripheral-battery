@@ -145,11 +145,11 @@ internal static class VgnProbeProgram
     private static void SendKeyboard(IHidChannel ch)
     {
         byte[] buf = new byte[64];
-        // VHUB 的 WsServe 走 COL04（FF1C:0092）/ report 4，数据为 [0,0,cmd,6,...]
+        // VHUB 实测：COL04（FF1C:0092）/ report 4，电量命令 0x1A，数据 [0,0,26,6,0,0,0]
         buf[0] = 4;
         buf[1] = 0;
         buf[2] = 0;
-        buf[3] = 5;
+        buf[3] = 26;
         buf[4] = 6;
         bool ok = ch.Write(buf);
         L("KBD TX -> " + ok + "  " + Hex(buf, 16));

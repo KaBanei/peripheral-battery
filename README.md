@@ -155,6 +155,9 @@ dist/app/              构建产物（PeripheralBattery.exe、BatteryProbe.exe�
 
 ## 更新日志
 
+### v1.1.3（2026-10-18）
+- 通过 VHUB 调试端口抓到键盘真实电量命令：COL04 / report 4，命令 0x1A，响应第 7 字节为电量（实测 71%）。VgnProbe 已改用该命令，用于继续验证键盘唤醒后的回包。
+
 ### v1.1.2（2026-10-18）
 - 修正 VgnProbe 键盘通道：改用 VHUB 实际使用的 COL04（FF1C:0092）/ report 4（之前发到了 COL05/report 5，所以键盘日志没有回包）。
 
