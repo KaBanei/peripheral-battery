@@ -132,6 +132,8 @@ A：通用识别按“接收器型号（VID:PID）”归并，一个接收器可
 
 ## 构建
 
+发布打包：先 `build.ps1 -Probe`，再运行 `tools\package-release.ps1`；脚本只保留最新版本的发布目录和 zip。
+
 环境要求：Windows 10/11 x64 + .NET Framework 4.8（系统自带，无需安装 .NET SDK / NuGet / 第三方库）。
 
 ```powershell
