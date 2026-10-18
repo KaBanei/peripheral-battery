@@ -164,7 +164,7 @@ PID  : 2
 * 属性由蓝牙栈在**设备连接并且拿到电量后**写入；未连接、刚配对、驱动未上报时为空。
 * 以 BLE/GATT Battery Service 为主。经典 BR/EDR 设备即使支持 HFP 电量指示，也未必写进该属性；fastfetch 源码注释也指出 Windows 把经典（BR/EDR）与低功耗（LE）栈分开处理。
 * 厂商私有的 2.4G dongle 完全不经过蓝牙栈，永远不会出现在这里。
-* **本机实测**：全部 324 个 PnP 节点中 `BTH*` 39 个，只有 1 个带该属性——`BTHLE\DEV_51C16CD6C239`（名称「卡巴内的 iPhone」），值 100。`BTHENUM` 下的 AirPods/iPhone 服务节点、蓝牙适配器节点均为空。这解释了为什么该类 Provider 必须容忍「0 结果」。
+* **本机实测**：全部 324 个 PnP 节点中 `BTH*` 39 个，只有 1 个带该属性（一台 BLE 设备，值 100）。`BTHENUM` 下的服务节点、蓝牙适配器节点均为空。这解释了为什么该类 Provider 必须容忍「0 结果」。
 
 来源：
 * fastfetch `bluetooth_windows.c`（属性键定义、BR/EDR 与 LE 栈分离的说明）：https://github.com/fastfetch-cli/fastfetch/blob/dev/src/detection/bluetooth/bluetooth_windows.c

@@ -168,6 +168,7 @@ dist/app/              构建产物（PeripheralBattery.exe、BatteryProbe.exe�
 - 安全策略：[SECURITY.md](SECURITY.md)
 - CI：`.github/workflows/build.yml`（windows-latest，csc 构建 + 自检）
 - 发版签名：`.github/workflows/release-sign.yml` + SignPath
+- 上架 GitHub 的完整清单与流程：[docs/github-publish.md](docs/github-publish.md)
 - 免费开源签名的完整申请/配置步骤：[docs/opensource-signing.md](docs/opensource-signing.md)
 - 自签名/购买 OV/EV 的对比：[docs/signing.md](docs/signing.md)
 
