@@ -336,7 +336,13 @@ namespace Pb.App
             _config.Normalize();
 
             try { _config.Save(); } catch { }
-            try { AutoStart.SetEnabled(_config.StartWithWindows); } catch { }
+            bool autoOk = true;
+            try { autoOk = AutoStart.SetEnabled(_config.StartWithWindows); } catch { autoOk = false; }
+            if (_config.StartWithWindows && !autoOk)
+            {
+                MessageBox.Show("开机启动写入失败。\n可能被安全软件或系统策略拦截，请尝试以当前用户身份运行本程序，或改用任务计划程序。",
+                    "开机启动", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
 
             RestartRequired = dsChanged || demoChanged;
             DialogResult = DialogResult.OK;

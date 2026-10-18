@@ -106,6 +106,7 @@ namespace Pb.App
 
             // 已启用开机启动时刷新注册表路径（程序可能被移动过）
             try { if (AutoStart.IsEnabled) AutoStart.SetEnabled(true); } catch { }
+            try { Log.Info("开机启动诊断: enabled=" + AutoStart.IsEnabled + " command=" + AutoStart.Command); } catch { }
 
             UpdateTray();
             try
@@ -197,6 +198,7 @@ namespace Pb.App
             _startupDone = true;
             if (_exiting) return;
 
+            bool firstRun = !_config.HasCompletedFirstRun;
             if (!_config.HasCompletedFirstRun)
             {
                 try
@@ -208,6 +210,11 @@ namespace Pb.App
                         {
                             _config.HasCompletedFirstRun = true;
                             try { _config.Save(); } catch { }
+                            if (firstRun && _config.StartWithWindows && !AutoStart.IsEnabled)
+                            {
+                                bool autoOk = AutoStart.SetEnabled(true);
+                                if (!autoOk) Log.Warn("首次启动写入开机启动失败");
+                            }
                         }
                     }
                 }
