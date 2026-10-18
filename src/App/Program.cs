@@ -120,6 +120,8 @@ namespace Pb.App
             list.Add(MakeEdgeSample(DeviceKind.Keyboard, "VGN 键盘", 68, BatteryState.Discharging));
             list.Add(MakeEdgeSample(DeviceKind.Headset, "耳机", 42, BatteryState.Discharging));
             list.Add(MakeEdgeSample(DeviceKind.Gamepad, "手柄", 100, BatteryState.Full));
+            AppConfig cfg = AppConfig.Load();
+            f.Configure(cfg.EdgeBarSide, cfg.EdgeBarY, cfg.EdgeBarOpacity);
             f.SetData(list);
             f.ShowBar(Screen.PrimaryScreen);
             Application.Run(f);

@@ -446,7 +446,7 @@ namespace Pb.App
                     };
                 }
                 Screen scr = Screen.FromControl(_main);
-                _edgeBar.Configure(_config.EdgeBarSide, _config.EdgeBarY);
+                _edgeBar.Configure(_config.EdgeBarSide, _config.EdgeBarY, _config.EdgeBarOpacity);
                 _edgeBar.SetData(_devices);
                 _edgeBar.ShowBar(scr);
                 _main.Hide();

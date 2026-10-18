@@ -12,7 +12,7 @@ namespace Pb.App
     internal sealed class SettingsForm : ChromeForm
     {
         private const int LogicalWidth = 560;
-        private const int LogicalHeight = 720;
+        private const int LogicalHeight = 764;
         private const int Pad = 16;
         private const int CardPad = 14;
         private const int HeaderH = 26;
@@ -35,6 +35,7 @@ namespace Pb.App
 
         private readonly Stepper _stepRefresh;
         private readonly Stepper _stepLow;
+        private readonly Stepper _stepOpacity;
         private readonly SegmentControl _segTray;
         private readonly DarkCheckBox _chkBalloon;
         private readonly DarkCheckBox _chkAutoStart;
@@ -70,6 +71,14 @@ namespace Pb.App
             _segTray = new SegmentControl();
             _segTray.Items = new string[] { "最低", "平均", "最高" };
             Controls.Add(_segTray);
+
+            _stepOpacity = new Stepper();
+            _stepOpacity.Minimum = 20;
+            _stepOpacity.Maximum = 100;
+            _stepOpacity.Step = 5;
+            _stepOpacity.Suffix = " %";
+            _stepOpacity.Value = config.EdgeBarOpacity;
+            Controls.Add(_stepOpacity);
 
             _stepLow = new Stepper();
             _stepLow.Minimum = 1;
@@ -169,12 +178,14 @@ namespace Pb.App
             int y = S(62);
 
             // 常规
-            Section s1 = AddSection(x, y, cw, "常规", 2, RowH, null, null);
+            Section s1 = AddSection(x, y, cw, "常规", 3, RowH, null, null);
             y = s1.Rect.Bottom + S(GapY);
             int row = s1.Rect.Top + S(HeaderH);
             _stepRefresh.Bounds = new Rectangle(x + cw - S(CardPad) - S(118), row + S(7), S(118), S(30));
             row += S(RowH);
             _segTray.Bounds = new Rectangle(x + cw - S(CardPad) - S(210), row + S(7), S(210), S(30));
+            row += S(RowH);
+            _stepOpacity.Bounds = new Rectangle(x + cw - S(CardPad) - S(118), row + S(7), S(118), S(30));
 
             // 提醒
             Section s2 = AddSection(x, y, cw, "提醒", 2, RowH, null, null);
@@ -274,6 +285,7 @@ namespace Pb.App
             // 行标题
             DrawRowTitle(g, _sections[0].Rect, 0, "刷新间隔", "自动扫描所有数据源的频率（5-300 秒）");
             DrawRowTitle(g, _sections[0].Rect, 1, "托盘显示", "多台设备时，托盘图标显示哪个电量");
+            DrawRowTitle(g, _sections[0].Rect, 2, "浮窗透明度", "最小化侧边电量条的透明度（20–100%）");
             DrawRowTitle(g, _sections[1].Rect, 0, "低电量阈值", "电量低于该值时提醒");
             DrawRowTitle(g, _sections[1].Rect, 1, "", "");
             DrawRowTitle(g, _sections[2].Rect, 0, "", "");
@@ -310,6 +322,7 @@ namespace Pb.App
 
             _config.RefreshSeconds = _stepRefresh.Value;
             _config.TrayDisplay = TrayMode(_segTray.SelectedIndex);
+            _config.EdgeBarOpacity = _stepOpacity.Value;
             _config.LowBatteryThreshold = _stepLow.Value;
             _config.NotifyLowBattery = _chkBalloon.Checked;
             _config.StartWithWindows = _chkAutoStart.Checked;

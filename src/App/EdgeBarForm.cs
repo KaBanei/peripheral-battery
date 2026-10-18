@@ -29,6 +29,7 @@ namespace Pb.App
         private int _hoverIndex = -1;
         private string _side = "right";
         private double _yRatio = 0.5;
+        private int _opacityPercent = 100;
         private bool _dragging;
         private Point _dragOffset;
         private Point _dragStartScreen;
@@ -84,12 +85,28 @@ namespace Pb.App
         public string Side { get { return _side; } }
         public double YRatio { get { return _yRatio; } }
 
-        public void Configure(string side, double yRatio)
+        public void Configure(string side, double yRatio, int opacityPercent)
         {
             if (side == "left" || side == "right") _side = side;
             if (yRatio < 0) yRatio = 0;
             if (yRatio > 1) yRatio = 1;
+            if (opacityPercent < 20) opacityPercent = 20;
+            if (opacityPercent > 100) opacityPercent = 100;
             _yRatio = yRatio;
+            _opacityPercent = opacityPercent;
+            ApplyOpacity();
+        }
+
+        private void ApplyOpacity()
+        {
+            try
+            {
+                double o = _opacityPercent / 100.0;
+                if (o < 0.2) o = 0.2;
+                if (o > 1) o = 1;
+                Opacity = o;
+            }
+            catch { }
         }
 
         private static void Fire(EventHandler h)
@@ -111,10 +128,12 @@ namespace Pb.App
             _shouldShow = true;
             UpdateSize();
             Reposition();
+            ApplyOpacity();
             if (!Visible) Show();
             // Show() 会触发 WinForms 的 DPI 自动缩放（宽度会被改掉），显示后再应用一次真实尺寸。
             UpdateSize();
             Reposition();
+            ApplyOpacity();
             _timer.Start();
             Invalidate();
         }
@@ -354,6 +373,7 @@ namespace Pb.App
                 Show();
                 UpdateSize();
                 Reposition();
+                ApplyOpacity();
             }
         }
 

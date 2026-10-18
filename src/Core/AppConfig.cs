@@ -17,6 +17,8 @@ namespace Pb.Core
         public string EdgeBarSide { get; set; }
         /// <summary>侧边条垂直位置（0=顶部，1=底部）。</summary>
         public double EdgeBarY { get; set; }
+        /// <summary>侧边条透明度（20–100，100=不透明）。</summary>
+        public int EdgeBarOpacity { get; set; }
         public bool RunInBackground { get; set; }
         public bool EnableLogitech { get; set; }
         public bool EnableStandardHid { get; set; }
@@ -37,6 +39,7 @@ namespace Pb.Core
             TrayDisplay = "worst";
             EdgeBarSide = "right";
             EdgeBarY = 0.5;
+            EdgeBarOpacity = 100;
             RunInBackground = true;
             EnableLogitech = true;
             EnableStandardHid = true;
@@ -131,6 +134,8 @@ namespace Pb.Core
             if (EdgeBarSide != "left") EdgeBarSide = "right";
             if (EdgeBarY < 0) EdgeBarY = 0;
             if (EdgeBarY > 1) EdgeBarY = 1;
+            if (EdgeBarOpacity < 20) EdgeBarOpacity = 20;
+            if (EdgeBarOpacity > 100) EdgeBarOpacity = 100;
             if (CustomNames == null) CustomNames = new Dictionary<string, string>();
             var bad = new List<string>();
             foreach (var kv in CustomNames)
