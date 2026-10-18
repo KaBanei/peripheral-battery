@@ -27,8 +27,14 @@ namespace Pb.App
         private Screen _screen;
         private bool _shouldShow;
         private int _hoverIndex = -1;
+        private string _side = "right";
+        private double _yRatio = 0.5;
+        private bool _dragging;
+        private Point _dragOffset;
+        private Point _dragStartScreen;
 
         public event EventHandler RestoreRequested;
+        public event EventHandler PositionChanged;
         public event EventHandler RefreshRequested;
         public event EventHandler ExitRequested;
 
@@ -73,6 +79,17 @@ namespace Pb.App
                 UpdateSize();
                 Reposition();
             };
+        }
+
+        public string Side { get { return _side; } }
+        public double YRatio { get { return _yRatio; } }
+
+        public void Configure(string side, double yRatio)
+        {
+            if (side == "left" || side == "right") _side = side;
+            if (yRatio < 0) yRatio = 0;
+            if (yRatio > 1) yRatio = 1;
+            _yRatio = yRatio;
         }
 
         private static void Fire(EventHandler h)
@@ -139,11 +156,29 @@ namespace Pb.App
             Screen scr = _screen ?? Screen.PrimaryScreen;
             Rectangle wa = scr.WorkingArea;
             int gap = Theme.S(this, 6);
-            int x = wa.Right - Width - gap;
-            int y = wa.Top + (wa.Height - Height) / 2;
-            if (x < wa.Left + gap) x = wa.Left + gap;
-            if (y < wa.Top + gap) y = wa.Top + gap;
+            int x = _side == "left" ? wa.Left + gap : wa.Right - Width - gap;
+            int y = wa.Top + (int)Math.Round((wa.Height - Height) * _yRatio);
+            if (x < wa.Left) x = wa.Left;
+            if (x + Width > wa.Right) x = wa.Right - Width;
+            if (y < wa.Top) y = wa.Top;
+            if (y + Height > wa.Bottom) y = wa.Bottom - Height;
             Location = new Point(x, y);
+        }
+
+        private void SnapToNearestEdge()
+        {
+            Point centerPoint = new Point(Left + Width / 2, Top + Height / 2);
+            Screen scr = Screen.FromPoint(centerPoint);
+            Rectangle wa = scr.WorkingArea;
+            int center = Left + Width / 2;
+            _side = center < wa.Left + wa.Width / 2 ? "left" : "right";
+            _screen = scr;
+            int y = Top;
+            if (y < wa.Top) y = wa.Top;
+            if (y + Height > wa.Bottom) y = wa.Bottom - Height;
+            _yRatio = wa.Height > Height ? (double)(y - wa.Top) / (wa.Height - Height) : 0;
+            Reposition();
+            Fire(PositionChanged);
         }
 
         protected override bool ShowWithoutActivation { get { return true; } }
@@ -263,9 +298,56 @@ namespace Pb.App
             return i;
         }
 
+        protected override void OnMouseLeave(EventArgs e)
+        {
+            base.OnMouseLeave(e);
+            _hoverIndex = -1;
+            Invalidate();
+        }
+
+        protected override void OnMouseDown(MouseEventArgs e)
+        {
+            base.OnMouseDown(e);
+            if (e.Button == MouseButtons.Left)
+            {
+                _dragOffset = e.Location;
+                _dragStartScreen = PointToScreen(e.Location);
+                _dragging = false;
+                Capture = true;
+                Cursor = Cursors.SizeAll;
+            }
+        }
+
+        protected override void OnMouseUp(MouseEventArgs e)
+        {
+            base.OnMouseUp(e);
+            if (e.Button != MouseButtons.Left) return;
+            bool moved = _dragging;
+            _dragging = false;
+            Capture = false;
+            Cursor = Cursors.Hand;
+            if (moved) SnapToNearestEdge();
+            else Fire(RestoreRequested);
+        }
+
         protected override void OnMouseMove(MouseEventArgs e)
         {
             base.OnMouseMove(e);
+            if (Capture && (Control.MouseButtons & MouseButtons.Left) != 0)
+            {
+                Point screen = PointToScreen(e.Location);
+                if (!_dragging)
+                {
+                    int dx = screen.X - _dragStartScreen.X;
+                    int dy = screen.Y - _dragStartScreen.Y;
+                    if (Math.Abs(dx) > 6 || Math.Abs(dy) > 6) _dragging = true;
+                }
+                if (_dragging)
+                {
+                    Location = new Point(screen.X - _dragOffset.X, screen.Y - _dragOffset.Y);
+                    return;
+                }
+            }
             int i = HitRow(e.Y);
             if (i != _hoverIndex)
             {
@@ -278,19 +360,6 @@ namespace Pb.App
                 _tip.SetToolTip(this, d.Name + "  " + Fmt.Percent(d.Percent) + "  " + Theme.StateText(d.State));
             }
             Cursor = i >= 0 ? Cursors.Hand : Cursors.Default;
-        }
-
-        protected override void OnMouseLeave(EventArgs e)
-        {
-            base.OnMouseLeave(e);
-            _hoverIndex = -1;
-            Invalidate();
-        }
-
-        protected override void OnMouseClick(MouseEventArgs e)
-        {
-            base.OnMouseClick(e);
-            if (e.Button == MouseButtons.Left) Fire(RestoreRequested);
         }
 
         private void TickFullscreen()
