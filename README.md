@@ -117,6 +117,12 @@ A：演示模式是假数据，用于查看界面。真实设备只有被识别�
 **Q：同一个接收器上的键盘和鼠标只显示一台？**
 A：通用识别按“接收器型号（VID:PID）”归并，一个接收器可能只显示一条记录（类别取键盘/鼠标中优先级更高的那个）。罗技 HID++ 接收器例外，会按配对设备逐台显示。
 
+## 下载
+
+- 发布版：[GitHub Releases](https://github.com/KaBanei/peripheral-battery/releases)
+- 隐私说明：[PRIVACY.md](PRIVACY.md)（不联网、不收集任何数据）
+- 开源代码签名由 [SignPath Foundation](https://signpath.org/foundation) 提供
+
 ## 构建
 
 环境要求：Windows 10/11 x64 + .NET Framework 4.8（系统自带，无需安装 .NET SDK / NuGet / 第三方库）。
