@@ -1,7 +1,7 @@
 param(
-    [string]$Tag = 'v1.8.0',
-    [string]$Zip = 'dist\2.4G外设电量监控-v1.8.0.zip',
-    [string]$Notes = 'docs\releases\v1.8.0.md'
+    [string]$Tag = 'v1.8.4',
+    [string]$Zip = 'dist\2.4G外设电量监控-v1.8.4.zip',
+    [string]$Notes = 'docs\releases\v1.8.4.md'
 )
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
