@@ -13,8 +13,6 @@ namespace Pb.Core
         public bool NotifyLowBattery { get; set; }
         public int LowBatteryThreshold { get; set; }
         public string TrayDisplay { get; set; }      // worst | average | highest
-        /// <summary>最小化后的展示方式：edge=侧边电量条，tray=每台设备一个托盘图标。</summary>
-        public string MinimizeMode { get; set; }
         /// <summary>侧边条吸附方向：left / right。</summary>
         public string EdgeBarSide { get; set; }
         /// <summary>侧边条垂直位置（0=顶部，1=底部）。</summary>
@@ -37,7 +35,6 @@ namespace Pb.Core
             NotifyLowBattery = true;
             LowBatteryThreshold = 15;
             TrayDisplay = "worst";
-            MinimizeMode = "edge";
             EdgeBarSide = "right";
             EdgeBarY = 0.5;
             RunInBackground = true;
@@ -131,7 +128,6 @@ namespace Pb.Core
             if (LowBatteryThreshold < 1) LowBatteryThreshold = 1;
             if (LowBatteryThreshold > 90) LowBatteryThreshold = 90;
             if (TrayDisplay != "average" && TrayDisplay != "highest") TrayDisplay = "worst";
-            if (MinimizeMode != "tray") MinimizeMode = "edge";
             if (EdgeBarSide != "left") EdgeBarSide = "right";
             if (EdgeBarY < 0) EdgeBarY = 0;
             if (EdgeBarY > 1) EdgeBarY = 1;

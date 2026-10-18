@@ -36,8 +36,6 @@ namespace Pb.App
         private MainForm _main;
         private EdgeBarForm _edgeBar;
         private bool _edgeMode;
-        private readonly List<NotifyIcon> _deviceIcons = new List<NotifyIcon>();
-        private bool _iconMode;
         private bool _exiting;
         private bool _cleanupDone;
         private bool _startupDone;
@@ -259,7 +257,6 @@ namespace Pb.App
             if (_flyout != null && !_flyout.IsDisposed) _flyout.SetData(_devices, _statuses, _at);
             if (_main != null && !_main.IsDisposed && _main.Visible) _main.SetData(_devices, _statuses, _at);
             if (_edgeBar != null && !_edgeBar.IsDisposed) _edgeBar.SetData(_devices);
-            if (_iconMode) UpdateDeviceIcons();
             CheckLowBattery();
         }
 
@@ -330,10 +327,8 @@ namespace Pb.App
         {
             try
             {
-                NotifyIcon target = _tray;
-                if (_iconMode && _deviceIcons.Count > 0) target = _deviceIcons[0];
-                if (target == null || !target.Visible) return;
-                target.ShowBalloonTip(5000, title, text, icon);
+                if (_tray == null || !_tray.Visible) return;
+                _tray.ShowBalloonTip(5000, title, text, icon);
             }
             catch (Exception ex) { Log.Warn("气泡提示失败: " + ex.Message); }
         }
@@ -395,11 +390,6 @@ namespace Pb.App
                     _edgeBar.HideBar();
                 }
                 _edgeMode = false;
-                if (_iconMode)
-                {
-                    _iconMode = false;
-                    HideDeviceIcons();
-                }
                 if (_main == null || _main.IsDisposed)
                 {
                     _main = new MainForm(_config);
@@ -431,11 +421,6 @@ namespace Pb.App
         private void MinimizeToEdge()
         {
             if (_exiting || _main == null || _main.IsDisposed) return;
-            if (string.Equals(_config.MinimizeMode, "tray", StringComparison.OrdinalIgnoreCase))
-            {
-                MinimizeToTrayIcons();
-                return;
-            }
             try
             {
                 if (_flyout != null && !_flyout.IsDisposed) _flyout.Hide();
@@ -471,84 +456,6 @@ namespace Pb.App
             {
                 Log.Error("最小化到侧边栏失败", ex);
             }
-        }
-
-        private void MinimizeToTrayIcons()
-        {
-            if (_exiting || _main == null || _main.IsDisposed) return;
-            try
-            {
-                if (_flyout != null && !_flyout.IsDisposed) _flyout.Hide();
-                _iconMode = true;
-                UpdateDeviceIcons();
-                _main.Hide();
-            }
-            catch (Exception ex)
-            {
-                Log.Error("最小化到托盘图标失败", ex);
-            }
-        }
-
-        private void UpdateDeviceIcons()
-        {
-            HideDeviceIcons(false);
-            if (!_iconMode) return;
-            int n = Math.Min(_devices.Count, 6);
-            for (int i = 0; i < n; i++)
-            {
-                Peripheral d = _devices[i];
-                NotifyIcon ni = new NotifyIcon();
-                try
-                {
-                    ni.Icon = IconRenderer.CreateBadge(d);
-                    string name = string.IsNullOrEmpty(d.Name) ? d.KindText : d.Name;
-                    string text = name + " " + Fmt.Percent(d.Percent);
-                    ni.Text = text.Length > 63 ? text.Substring(0, 63) : text;
-                    ni.ContextMenuStrip = _menu;
-                    ni.Visible = true;
-                    ni.MouseClick += delegate(object sender, MouseEventArgs e)
-                    {
-                        if (e.Button == MouseButtons.Left) RestoreFromIcons();
-                    };
-                    _deviceIcons.Add(ni);
-                }
-                catch (Exception ex)
-                {
-                    Log.Warn("创建设备托盘图标失败: " + ex.Message);
-                    try { ni.Dispose(); } catch { }
-                }
-            }
-            try { _tray.Visible = _deviceIcons.Count == 0; } catch { }
-            Log.Info("托盘图标模式: " + _deviceIcons.Count + " 个设备图标");
-        }
-
-        private void HideDeviceIcons()
-        {
-            HideDeviceIcons(true);
-        }
-
-        private void HideDeviceIcons(bool restoreMainIcon)
-        {
-            for (int i = 0; i < _deviceIcons.Count; i++)
-            {
-                NotifyIcon ni = _deviceIcons[i];
-                try { ni.Visible = false; } catch { }
-                try { Icon ic = ni.Icon; if (ic != null) ic.Dispose(); } catch { }
-                try { ni.Dispose(); } catch { }
-            }
-            _deviceIcons.Clear();
-            if (restoreMainIcon)
-            {
-                try { if (_tray != null) _tray.Visible = true; } catch { }
-            }
-        }
-
-        private void RestoreFromIcons()
-        {
-            if (_exiting) return;
-            _iconMode = false;
-            HideDeviceIcons();
-            ShowMain();
         }
 
         private void RestoreFromEdge()
@@ -706,7 +613,6 @@ namespace Pb.App
             try { if (_flyout != null && !_flyout.IsDisposed) { _flyout.Hide(); _flyout.Dispose(); } } catch { }
             try { if (_main != null && !_main.IsDisposed) { _main.CloseForExit(); _main.Dispose(); } } catch { }
             try { if (_edgeBar != null && !_edgeBar.IsDisposed) { _edgeBar.HideBar(); _edgeBar.Dispose(); } } catch { }
-            try { HideDeviceIcons(); } catch { }
             try { if (_tray != null) _tray.Dispose(); } catch { }
             try { _icons.Dispose(); } catch { }
         }

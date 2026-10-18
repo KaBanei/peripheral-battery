@@ -16,9 +16,9 @@ namespace Pb.App
     /// </summary>
     internal sealed class EdgeBarForm : Form
     {
-        private const int HeaderLogical = 26;
-        private const int RowLogical = 46;
-        private const int FooterLogical = 8;
+        private const int HeaderLogical = 22;
+        private const int RowLogical = 38;
+        private const int FooterLogical = 6;
 
         private readonly Timer _timer;
         private readonly ToolTip _tip;
@@ -72,7 +72,7 @@ namespace Pb.App
 
             _timer = new Timer();
             _timer.Interval = 700;
-            _timer.Tick += delegate { TickFullscreen(); };
+            _timer.Tick += delegate { TickAutoHide(); };
 
             DpiChanged += delegate
             {
@@ -132,7 +132,7 @@ namespace Pb.App
             if (n < 1) n = 1;
             if (n > 8) n = 8;
             int logical = HeaderLogical + n * RowLogical + FooterLogical;
-            ClientSize = new Size(Theme.S(this, 62), Theme.S(this, logical));
+            ClientSize = new Size(Theme.S(this, 48), Theme.S(this, logical));
             UpdateRegion();
         }
 
@@ -209,7 +209,7 @@ namespace Pb.App
             Draw.FillRound(g, Theme.Card, bg, Theme.SF(this, 11f));
             Draw.StrokeRound(g, Theme.Border, bg, Theme.SF(this, 11f), 1f);
 
-            DrawBattery(g, Width / 2, Theme.S(this, 11), Theme.S(this, 20), Theme.S(this, 10));
+            DrawBattery(g, Width / 2, Theme.S(this, 9), Theme.S(this, 15), Theme.S(this, 8));
 
             int rowH = Theme.S(this, RowLogical);
             int top0 = Theme.S(this, HeaderLogical);
@@ -228,26 +228,26 @@ namespace Pb.App
                 if (i == _hoverIndex)
                 {
                     Draw.FillRound(g, Theme.CardHover,
-                        new RectangleF(Theme.S(this, 3), top + Theme.S(this, 3), Width - Theme.S(this, 6), rowH - Theme.S(this, 6)),
-                        Theme.SF(this, 8f));
+                        new RectangleF(Theme.S(this, 2), top + Theme.S(this, 2), Width - Theme.S(this, 4), rowH - Theme.S(this, 4)),
+                        Theme.SF(this, 7f));
                 }
                 Color c = Theme.BatteryColor(d.Percent, d.State);
                 Draw.FillRound(g, c,
-                    new RectangleF(Theme.S(this, 8), top + Theme.S(this, 9), Theme.S(this, 3), Theme.S(this, 24)),
+                    new RectangleF(Theme.S(this, 6), top + Theme.S(this, 7), Theme.S(this, 2), Theme.S(this, 24)),
                     Theme.SF(this, 1.5f));
 
                 string pct = d.Percent.HasValue ? d.Percent.Value.ToString() : "--";
-                TextRenderer.DrawText(g, pct, Theme.FontNum,
-                    new Rectangle(Theme.S(this, 12), top + Theme.S(this, 4), Width - Theme.S(this, 16), Theme.S(this, 23)),
+                TextRenderer.DrawText(g, pct, Theme.FontH1,
+                    new Rectangle(Theme.S(this, 9), top + Theme.S(this, 1), Width - Theme.S(this, 13), Theme.S(this, 19)),
                     c, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
                 TextRenderer.DrawText(g, KindShort(d.Kind), Theme.FontSmall,
-                    new Rectangle(Theme.S(this, 12), top + Theme.S(this, 27), Width - Theme.S(this, 16), Theme.S(this, 12)),
+                    new Rectangle(Theme.S(this, 9), top + Theme.S(this, 20), Width - Theme.S(this, 13), Theme.S(this, 11)),
                     Theme.Sub, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
                 if (i < count - 1)
                 {
                     using (Pen pen = new Pen(Theme.Divider, 1f))
                     {
-                        g.DrawLine(pen, Theme.S(this, 16), top + rowH - 1, Width - Theme.S(this, 16), top + rowH - 1);
+                        g.DrawLine(pen, Theme.S(this, 12), top + rowH - 1, Width - Theme.S(this, 12), top + rowH - 1);
                     }
                 }
             }
@@ -255,7 +255,7 @@ namespace Pb.App
             using (SolidBrush b = new SolidBrush(Theme.Gray))
             {
                 int dot = Theme.S(this, 2);
-                int cy = Height - Theme.S(this, 7);
+                int cy = Height - Theme.S(this, 5);
                 g.FillEllipse(b, Width / 2 - dot * 3, cy, dot, dot);
                 g.FillEllipse(b, Width / 2, cy, dot, dot);
                 g.FillEllipse(b, Width / 2 + dot * 3, cy, dot, dot);
@@ -362,10 +362,10 @@ namespace Pb.App
             Cursor = i >= 0 ? Cursors.Hand : Cursors.Default;
         }
 
-        private void TickFullscreen()
+        private void TickAutoHide()
         {
             if (!_shouldShow) return;
-            bool fs = IsForegroundFullscreen();
+            bool fs = ShouldHideForForeground();
             if (fs)
             {
                 if (Visible) Hide();
@@ -380,7 +380,8 @@ namespace Pb.App
             }
         }
 
-        private static bool IsForegroundFullscreen()
+        /// <summary>前台窗口与浮窗在同一屏幕，且最大化或全屏时隐藏。</summary>
+        private bool ShouldHideForForeground()
         {
             try
             {
@@ -391,6 +392,13 @@ namespace Pb.App
                 if (pid == (uint)Process.GetCurrentProcess().Id) return false;
                 string cls = ClassName(h);
                 if (cls == "Progman" || cls == "WorkerW" || cls == "Shell_TrayWnd") return false;
+
+                Screen fg = Screen.FromHandle(h);
+                Screen mine = _screen ?? Screen.FromControl(this);
+                if (fg.DeviceName != mine.DeviceName) return false;
+
+                if (IsZoomed(h)) return true;
+
                 RECT r;
                 if (!GetWindowRect(h, out r)) return false;
                 IntPtr mon = MonitorFromWindow(h, 2);
@@ -440,6 +448,7 @@ namespace Pb.App
         }
 
         [DllImport("user32.dll")] private static extern IntPtr GetForegroundWindow();
+        [DllImport("user32.dll")] private static extern bool IsZoomed(IntPtr hWnd);
         [DllImport("user32.dll")] private static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
         [DllImport("user32.dll")] private static extern IntPtr MonitorFromWindow(IntPtr hwnd, uint dwFlags);
         [DllImport("user32.dll")] private static extern bool GetMonitorInfo(IntPtr hMonitor, ref MONITORINFO lpmi);
