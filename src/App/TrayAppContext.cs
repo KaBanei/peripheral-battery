@@ -223,7 +223,12 @@ namespace Pb.App
 
             if (_openFlyout) { ShowFlyout(); return; }
             if (_openSettings) { ShowSettings(); return; }
-            if (!_startHidden) ShowMain();
+            if (_startHidden)
+            {
+                ShowEdgeBarOnStartup();
+                return;
+            }
+            ShowMain();
         }
 
         private void OnWakeRequested()
@@ -425,33 +430,55 @@ namespace Pb.App
             }
         }
 
+        private void EnsureEdgeBar()
+        {
+            if (_edgeBar != null && !_edgeBar.IsDisposed) return;
+            _edgeBar = new EdgeBarForm();
+            _edgeBar.RestoreRequested += delegate { RestoreFromEdge(); };
+            _edgeBar.RefreshRequested += delegate
+            {
+                try { _host.RefreshNow(); } catch (Exception ex) { Log.Warn("刷新失败: " + ex.Message); }
+            };
+            _edgeBar.ExitRequested += delegate { ExitApp(); };
+            _edgeBar.FormClosed += delegate { _edgeBar = null; };
+            _edgeBar.PositionChanged += delegate
+            {
+                try
+                {
+                    _config.EdgeBarSide = _edgeBar.Side;
+                    _config.EdgeBarY = _edgeBar.YRatio;
+                    _config.Save();
+                }
+                catch { }
+            };
+        }
+
+        /// <summary>开机自启（--tray）默认直接显示侧边浮窗，而不是只留托盘图标。</summary>
+        private void ShowEdgeBarOnStartup()
+        {
+            if (_exiting) return;
+            try
+            {
+                EnsureEdgeBar();
+                _edgeBar.Configure(_config.EdgeBarSide, _config.EdgeBarY, _config.EdgeBarOpacity);
+                _edgeBar.SetData(_devices);
+                _edgeBar.ShowBar(Screen.PrimaryScreen);
+                _edgeMode = true;
+                Log.Info("自启动: 显示侧边浮窗");
+            }
+            catch (Exception ex)
+            {
+                Log.Error("自启动显示侧边浮窗失败", ex);
+            }
+        }
+
         private void MinimizeToEdge()
         {
             if (_exiting || _main == null || _main.IsDisposed) return;
             try
             {
                 if (_flyout != null && !_flyout.IsDisposed) _flyout.Hide();
-                if (_edgeBar == null || _edgeBar.IsDisposed)
-                {
-                    _edgeBar = new EdgeBarForm();
-                    _edgeBar.RestoreRequested += delegate { RestoreFromEdge(); };
-                    _edgeBar.RefreshRequested += delegate
-                    {
-                        try { _host.RefreshNow(); } catch (Exception ex) { Log.Warn("刷新失败: " + ex.Message); }
-                    };
-                    _edgeBar.ExitRequested += delegate { ExitApp(); };
-                    _edgeBar.FormClosed += delegate { _edgeBar = null; };
-                    _edgeBar.PositionChanged += delegate
-                    {
-                        try
-                        {
-                            _config.EdgeBarSide = _edgeBar.Side;
-                            _config.EdgeBarY = _edgeBar.YRatio;
-                            _config.Save();
-                        }
-                        catch { }
-                    };
-                }
+                EnsureEdgeBar();
                 Screen scr = Screen.FromControl(_main);
                 _edgeBar.Configure(_config.EdgeBarSide, _config.EdgeBarY, _config.EdgeBarOpacity);
                 _edgeBar.SetData(_devices);

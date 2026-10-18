@@ -27,7 +27,7 @@ namespace Pb.App
                 }
             }
             catch { }
-            return "1.8.3";
+            return "1.8.4";
         }
     }
 
