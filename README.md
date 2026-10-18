@@ -4,6 +4,8 @@
 
 **绿色免安装**：单个 exe，只依赖 Windows 自带的 .NET Framework 4.8；无驱动、无需管理员、不联网、不上传任何数据。
 
+> **English**: a lightweight Windows tray app showing real-time battery levels of 2.4G / Bluetooth peripherals. Built with .NET Framework 4.8 (csc only, no NuGet), no drivers, no telemetry. Supports Logitech HID++, VGN private HID protocols, BLE battery, and Xbox controllers. Licensed under MIT.
+
 ![主面板](docs/images/main.png)
 
 ## 功能
@@ -157,6 +159,18 @@ dist/app/              构建产物（PeripheralBattery.exe、BatteryProbe.exe�
 
 程序未签名时 Windows 会提示“发布者未知”。自己用可 `Unblock-File` 解除；对外分发建议购买 OV/EV 证书并用 `installer/sign.ps1` 签名，或走 Microsoft Store。完整方案与成本对比见 [docs/signing.md](docs/signing.md)。
 
+## 开源与代码签名
+
+本项目以 **MIT License** 开源，代码、构建脚本、文档都可直接复用。
+
+- 许可证：[LICENSE](LICENSE)
+- 贡献指南：[CONTRIBUTING.md](CONTRIBUTING.md)
+- 安全策略：[SECURITY.md](SECURITY.md)
+- CI：`.github/workflows/build.yml`（windows-latest，csc 构建 + 自检）
+- 发版签名：`.github/workflows/release-sign.yml` + SignPath
+- 免费开源签名的完整申请/配置步骤：[docs/opensource-signing.md](docs/opensource-signing.md)
+- 自签名/购买 OV/EV 的对比：[docs/signing.md](docs/signing.md)
+
 ## 更新日志
 
 ### v1.3.1（2026-10-18）
@@ -203,3 +217,7 @@ dist/app/              构建产物（PeripheralBattery.exe、BatteryProbe.exe�
 ## 致谢
 
 协议实现参考了 Logitech HID++ 2.0 草案、[Solaar](https://github.com/pwr-Solaar/Solaar)、[OpenLogi](https://openlogi.org/hidpp)、[OpenRazer](https://github.com/openrazer/openrazer) 等公开资料，均为独立实现；详见 [docs/protocols.md](docs/protocols.md)。
+
+## License
+
+[MIT](LICENSE) © 2026 PeripheralBattery contributors

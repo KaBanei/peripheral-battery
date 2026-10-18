@@ -1,0 +1,31 @@
+name: build
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build (csc / .NET Framework 4.8)
+        shell: powershell
+        run: .\build.ps1 -Probe
+
+      - name: Self test
+        shell: powershell
+        run: .\dist\app\BatteryProbe.exe --selftest
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: PeripheralBattery-unsigned
+          path: |
+            dist/app/PeripheralBattery.exe
+            dist/app/BatteryProbe.exe
+            dist/app/VgnProbe.exe
+            dist/app/使用说明.txt

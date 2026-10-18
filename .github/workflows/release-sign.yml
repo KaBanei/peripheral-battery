@@ -1,0 +1,75 @@
+name: release-sign
+
+# Builds, signs via SignPath (after Foundation approval) and publishes a GitHub Release.
+# Required repository secrets:
+#   SIGNPATH_API_TOKEN          - SignPath API token
+#   SIGNPATH_ORGANIZATION_ID    - SignPath organization id
+# Optional repository variables:
+#   SIGNPATH_PROJECT_SLUG       - defaults to peripheral-battery
+#   SIGNPATH_POLICY_SLUG        - defaults to release-signing
+#   SIGNPATH_CONFIG_SLUG        - defaults to exe
+#
+# See docs/opensource-signing.md for the full setup.
+
+on:
+  push:
+    tags: [ 'v*' ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  build-sign-release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build (csc / .NET Framework 4.8)
+        shell: powershell
+        run: .\build.ps1 -Probe
+
+      - name: Self test
+        shell: powershell
+        run: .\dist\app\BatteryProbe.exe --selftest
+
+      - name: Upload unsigned binaries
+        id: upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: unsigned
+          path: |
+            dist/app/PeripheralBattery.exe
+            dist/app/BatteryProbe.exe
+            dist/app/VgnProbe.exe
+
+      - name: Submit signing request to SignPath
+        id: sign
+        uses: signpath/github-action-submit-signing-request@v1
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ secrets.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG || 'peripheral-battery' }}
+          signing-policy-slug: ${{ vars.SIGNPATH_POLICY_SLUG || 'release-signing' }}
+          artifact-configuration-slug: ${{ vars.SIGNPATH_CONFIG_SLUG || 'exe' }}
+          github-artifact-id: ${{ steps.upload.outputs.artifact-id }}
+          wait-for-completion: true
+          output-artifact-directory: signed
+
+      - name: Package release folder
+        shell: powershell
+        run: |
+          New-Item -ItemType Directory -Force -Path dist/release | Out-Null
+          Copy-Item signed/* dist/release/ -Force
+          Copy-Item "dist/app/使用说明.txt" dist/release/ -Force
+          Copy-Item README.md dist/release/ -Force
+          Copy-Item docs dist/release/docs -Recurse -Force
+          Copy-Item installer dist/release/installer -Recurse -Force
+          Compress-Archive -Path dist/release -DestinationPath "dist/PeripheralBattery-${{ github.ref_name }}.zip" -Force
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/PeripheralBattery-*.zip
+          generate_release_notes: true
