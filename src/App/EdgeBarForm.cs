@@ -16,9 +16,9 @@ namespace Pb.App
     /// </summary>
     internal sealed class EdgeBarForm : Form
     {
-        private const int HeaderLogical = 22;
-        private const int RowLogical = 38;
-        private const int FooterLogical = 6;
+        private const int HeaderLogical = 4;
+        private const int RowLogical = 19;
+        private const int FooterLogical = 4;
 
         private readonly Timer _timer;
         private readonly ToolTip _tip;
@@ -132,7 +132,7 @@ namespace Pb.App
             if (n < 1) n = 1;
             if (n > 8) n = 8;
             int logical = HeaderLogical + n * RowLogical + FooterLogical;
-            ClientSize = new Size(Theme.S(this, 48), Theme.S(this, logical));
+            ClientSize = new Size(Theme.S(this, 18), Theme.S(this, logical));
             UpdateRegion();
         }
 
@@ -141,7 +141,7 @@ namespace Pb.App
             if (Width <= 0 || Height <= 0) return;
             try
             {
-                using (GraphicsPath p = Draw.Round(new RectangleF(0, 0, Width, Height), Theme.SF(this, 11f)))
+                using (GraphicsPath p = Draw.Round(new RectangleF(0, 0, Width, Height), Theme.SF(this, 8f)))
                 {
                     Region old = Region;
                     Region = new Region(p);
@@ -206,20 +206,19 @@ namespace Pb.App
             Graphics g = e.Graphics;
             g.SmoothingMode = SmoothingMode.AntiAlias;
             RectangleF bg = new RectangleF(0.5f, 0.5f, Width - 1f, Height - 1f);
-            Draw.FillRound(g, Theme.Card, bg, Theme.SF(this, 11f));
-            Draw.StrokeRound(g, Theme.Border, bg, Theme.SF(this, 11f), 1f);
-
-            DrawBattery(g, Width / 2, Theme.S(this, 9), Theme.S(this, 15), Theme.S(this, 8));
+            Draw.FillRound(g, Theme.Card, bg, Theme.SF(this, 8f));
+            Draw.StrokeRound(g, Theme.Border, bg, Theme.SF(this, 8f), 1f);
 
             int rowH = Theme.S(this, RowLogical);
             int top0 = Theme.S(this, HeaderLogical);
             int count = _devices.Count;
             if (count > 8) count = 8;
+            int trackW = Theme.S(this, 5);
+            int trackH = Theme.S(this, 13);
+            int tx = (Width - trackW) / 2;
             if (count == 0)
             {
-                TextRenderer.DrawText(g, "--", Theme.FontNum,
-                    new Rectangle(0, top0, Width, rowH), Theme.Sub,
-                    TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
+                DrawEmpty(g, tx, top0 + (rowH - trackH) / 2, trackW, trackH);
             }
             for (int i = 0; i < count; i++)
             {
@@ -228,61 +227,39 @@ namespace Pb.App
                 if (i == _hoverIndex)
                 {
                     Draw.FillRound(g, Theme.CardHover,
-                        new RectangleF(Theme.S(this, 2), top + Theme.S(this, 2), Width - Theme.S(this, 4), rowH - Theme.S(this, 4)),
-                        Theme.SF(this, 7f));
+                        new RectangleF(1, top + 1, Width - 2, rowH - 2),
+                        Theme.SF(this, 4f));
                 }
-                Color c = Theme.BatteryColor(d.Percent, d.State);
-                Draw.FillRound(g, c,
-                    new RectangleF(Theme.S(this, 6), top + Theme.S(this, 7), Theme.S(this, 2), Theme.S(this, 24)),
-                    Theme.SF(this, 1.5f));
-
-                string pct = d.Percent.HasValue ? d.Percent.Value.ToString() : "--";
-                TextRenderer.DrawText(g, pct, Theme.FontH1,
-                    new Rectangle(Theme.S(this, 9), top + Theme.S(this, 1), Width - Theme.S(this, 13), Theme.S(this, 19)),
-                    c, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
-                TextRenderer.DrawText(g, KindShort(d.Kind), Theme.FontSmall,
-                    new Rectangle(Theme.S(this, 9), top + Theme.S(this, 20), Width - Theme.S(this, 13), Theme.S(this, 11)),
-                    Theme.Sub, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
-                if (i < count - 1)
+                int ty = top + (rowH - trackH) / 2;
+                DrawEmpty(g, tx, ty, trackW, trackH);
+                if (d.Percent.HasValue)
                 {
-                    using (Pen pen = new Pen(Theme.Divider, 1f))
+                    int value = d.Percent.Value;
+                    if (value < 0) value = 0;
+                    if (value > 100) value = 100;
+                    int fillH = (int)Math.Round(trackH * value / 100.0);
+                    if (fillH < 2) fillH = 2;
+                    Color c = Theme.BatteryColor(d.Percent, d.State);
+                    Draw.FillRound(g, c,
+                        new RectangleF(tx, ty + trackH - fillH, trackW, fillH),
+                        Theme.SF(this, 2.5f));
+                }
+                else
+                {
+                    using (SolidBrush b = new SolidBrush(Theme.Gray))
                     {
-                        g.DrawLine(pen, Theme.S(this, 12), top + rowH - 1, Width - Theme.S(this, 12), top + rowH - 1);
+                        g.FillRectangle(b, tx + 1, ty + trackH / 2, Math.Max(1, trackW - 2), Math.Max(1, Theme.S(this, 1)));
                     }
                 }
-            }
-
-            using (SolidBrush b = new SolidBrush(Theme.Gray))
-            {
-                int dot = Theme.S(this, 2);
-                int cy = Height - Theme.S(this, 5);
-                g.FillEllipse(b, Width / 2 - dot * 3, cy, dot, dot);
-                g.FillEllipse(b, Width / 2, cy, dot, dot);
-                g.FillEllipse(b, Width / 2 + dot * 3, cy, dot, dot);
             }
             base.OnPaint(e);
         }
 
-        private void DrawBattery(Graphics g, int cx, int cy, int w, int h)
+        private void DrawEmpty(Graphics g, int x, int y, int w, int h)
         {
-            RectangleF body = new RectangleF(cx - w / 2f, cy - h / 2f, w, h);
-            Draw.StrokeRound(g, Theme.Sub, body, Theme.SF(this, 2f), 1.2f);
-            using (SolidBrush b = new SolidBrush(Theme.Sub))
-            {
-                g.FillRectangle(b, cx + w / 2f + 1, cy - Theme.S(this, 2), Theme.S(this, 2), Theme.S(this, 4));
-            }
-        }
-
-        private static string KindShort(DeviceKind k)
-        {
-            switch (k)
-            {
-                case DeviceKind.Mouse: return "鼠标";
-                case DeviceKind.Keyboard: return "键盘";
-                case DeviceKind.Headset: return "耳机";
-                case DeviceKind.Gamepad: return "手柄";
-                default: return "设备";
-            }
+            RectangleF r = new RectangleF(x, y, w, h);
+            Draw.FillRound(g, Theme.Field, r, Theme.SF(this, 2.5f));
+            Draw.StrokeRound(g, Theme.Border, r, Theme.SF(this, 2.5f), 1f);
         }
 
         private int HitRow(int y)
