@@ -190,9 +190,11 @@ namespace Pb.Core
                 if (newHas && !existingHas) map[key] = d;
                 else if (newHas == existingHas && d.Updated > existing.Updated) map[key] = d;
             }
+            // 先按类别（鼠标/键盘/耳机/手柄/其它），同类里已读到电量的排前面；
+            // 避免“未读电量的耳机”被已读电量的手机/其它设备挤到列表底部看不见。
             return map.Values
-                .OrderByDescending(d => d.Percent.HasValue)
-                .ThenBy(d => d.Kind)
+                .OrderBy(d => d.Kind)
+                .ThenByDescending(d => d.Percent.HasValue)
                 .ThenBy(d => d.Name)
                 .ToList();
         }
