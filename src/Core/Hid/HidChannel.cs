@@ -85,6 +85,21 @@ namespace Pb.Core.Hid
             }
         }
 
+        public bool WriteInterrupt(byte[] report)
+        {
+            if (report == null || report.Length == 0) return false;
+            lock (_sync)
+            {
+                if (IsDisposed || _handle == IntPtr.Zero || IsFaulted) return false;
+                int length = _info.OutputReportLen > 0
+                    ? Math.Max(_info.OutputReportLen, report.Length)
+                    : report.Length;
+                var buffer = new byte[length];
+                Array.Copy(report, buffer, Math.Min(report.Length, length));
+                return WriteOverlapped(buffer);
+            }
+        }
+
         private bool WriteOverlapped(byte[] data)
         {
             GCHandle pin = GCHandle.Alloc(data, GCHandleType.Pinned);

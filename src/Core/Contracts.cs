@@ -182,6 +182,8 @@ namespace Pb.Core
         HidInterface Info { get; }
         /// <summary>写入一个输出报告（首字节为报告 ID）。返回是否成功。</summary>
         bool Write(byte[] report);
+        /// <summary>通过中断 OUT 端点写入（WriteFile），适用于只认 interrupt OUT 的设备（如 VGN 键盘）。</summary>
+        bool WriteInterrupt(byte[] report);
         /// <summary>读取一个输入报告，超时返回 null。</summary>
         byte[] Read(int timeoutMs);
         byte[] GetFeature(byte reportId, int length);

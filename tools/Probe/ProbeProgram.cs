@@ -858,6 +858,11 @@ namespace Pb.Tools
                 return true;
             }
 
+            public bool WriteInterrupt(byte[] report)
+            {
+                return Write(report);
+            }
+
             public byte[] Read(int timeoutMs)
             {
                 return _pending.Count > 0 ? _pending.Dequeue() : null;

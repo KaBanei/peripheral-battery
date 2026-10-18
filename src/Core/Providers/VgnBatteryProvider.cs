@@ -40,10 +40,16 @@ namespace Pb.Core.Providers
                 {
                     if (ct.IsCancellationRequested) break;
                     HidInterface it = all[i];
-                    if (it.Vid != 0x3554 || it.Pid != 0xF503) continue;
-                    if (it.UsagePage != 0xFF02 || it.OutputReportLen < 16) continue;
-                    Peripheral p = TryReadMouse(bus, it, ct);
-                    if (p != null) result.Add(p);
+                    if (it.Vid == 0x3554 && it.Pid == 0xF503 && it.UsagePage == 0xFF02 && it.OutputReportLen >= 16)
+                    {
+                        Peripheral p = TryReadMouse(bus, it, ct);
+                        if (p != null) result.Add(p);
+                    }
+                    else if (it.Vid == 0x320F && it.Pid == 0x5088 && it.UsagePage == 0xFF1C && it.OutputReportLen >= 60)
+                    {
+                        Peripheral p = TryReadKeyboard(bus, it, ct);
+                        if (p != null) result.Add(p);
+                    }
                 }
             }
             catch (Exception ex)
@@ -108,6 +114,65 @@ namespace Pb.Core.Providers
             catch (Exception ex)
             {
                 if (_config.VerboseLog) _ctx.Log("[vgn] 读取失败: " + ex.Message);
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// 键盘（V98Pro V2）：COL04（FF1C:0092）/ report 4，命令 0x1A，数据 [0,0,0x1A,6,0,0,0]。
+        /// 必须走中断 OUT 端点（WriteFile），用 HidD_SetOutputReport（控制端点）设备不会回应。
+        /// 响应：[04 00 00 1A 06 00 00 00 47 ...]，第 8 字节为电量（0x47=71）。
+        /// </summary>
+        private Peripheral TryReadKeyboard(IHidBus bus, HidInterface iface, CancellationToken ct)
+        {
+            try
+            {
+                using (IHidChannel ch = bus.Open(iface))
+                {
+                    int len = iface.OutputReportLen >= 60 ? iface.OutputReportLen : 64;
+                    byte[] buf = new byte[len];
+                    buf[0] = 4;
+                    buf[3] = 26;
+                    buf[4] = 6;
+                    if (!ch.WriteInterrupt(buf)) return null;
+
+                    int? level = null;
+                    bool charging = false;
+                    DateTime deadline = DateTime.UtcNow.AddMilliseconds(1200);
+                    while (DateTime.UtcNow < deadline && !ct.IsCancellationRequested)
+                    {
+                        byte[] r = ch.Read(250);
+                        if (r == null) continue;
+                        if (r.Length > 8 && r[3] == 26)
+                        {
+                            level = r[8];
+                            charging = r[9] == 1;
+                            break;
+                        }
+                    }
+                    if (!level.HasValue || level.Value < 0 || level.Value > 100) return null;
+
+                    var p = new Peripheral();
+                    p.Id = "vgn:320f:5088";
+                    p.PhysicalId = p.Id;
+                    p.Name = "VGN V98Pro V2";
+                    p.Brand = "VGN";
+                    p.Kind = DeviceKind.Keyboard;
+                    p.Connection = "2.4G";
+                    p.Percent = level;
+                    p.State = charging ? BatteryState.Charging : BatteryState.Discharging;
+                    p.Provider = DisplayName;
+                    p.Detail = "VGN 私有协议（实验）· " + (iface.Product ?? "V98Pro V2");
+                    p.DevicePath = iface.Path;
+                    p.Vid = iface.Vid;
+                    p.Pid = iface.Pid;
+                    p.Updated = DateTime.Now;
+                    return p;
+                }
+            }
+            catch (Exception ex)
+            {
+                if (_config.VerboseLog) _ctx.Log("[vgn] 键盘读取失败: " + ex.Message);
                 return null;
             }
         }

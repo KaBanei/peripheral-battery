@@ -37,7 +37,7 @@
 | 标准 HID 电量（Usage 0x06/0x20） | 少数按规范上报的外设 | 百分比 | ⚠️ 2.4G dongle 极少暴露 |
 | Windows 蓝牙电量属性 | 已连接、系统能拿到电量的蓝牙设备（以 BLE 为主） | 百分比 | ✅ 本机实测可读到 BLE 设备 |
 | Xbox / XInput 手柄 | Xbox One / Series、兼容手柄 | 4 档 → 估 5/25/50/100 | ✅ 已实现（本机无手柄，负向路径已验证） |
-| VGN 2.4G 鼠标（实验） | VGN 蜻蜓 F1 系（3554:F503 接收器） | 百分比 + 充电状态 + 电压 | ✅ 已实测 |
+| VGN 2.4G（实验） | VGN 蜻蜓 F1 系鼠标（3554:F503）+ V98Pro V2 键盘（320F:5088） | 百分比 + 充电状态（鼠标另有电压） | ✅ 已实测 |
 | 通用外设识别 | 任意品牌的 2.4G / 无线 HID 键鼠（仅识别，不读电量） | 无（显示“未知”） | ✅ |
 | 模拟数据 | 演示与自检 | — | ✅ |
 
@@ -154,6 +154,10 @@ dist/app/              构建产物（PeripheralBattery.exe、BatteryProbe.exe�
 新增品牌支持请按 [docs/architecture.md](docs/architecture.md) 的六步实现一个 `IProvider`，并在 `ProviderRegistry` 注册。
 
 ## 更新日志
+
+### v1.2.0（2026-10-18）
+- **VGN V98Pro V2 键盘电量已支持**：通过 USBPcap 抓包确认必须走中断 OUT 端点（report 4 / 0x1A），此前用控制端点 SetOutputReport 设备不回应。实测 68%。
+- VGN 鼠标 + 键盘现在都能显示真实电量，整轮扫描约 130ms。
 
 ### v1.1.3（2026-10-18）
 - 通过 VHUB 调试端口抓到键盘真实电量命令：COL04 / report 4，命令 0x1A，响应第 7 字节为电量（实测 71%）。VgnProbe 已改用该命令，用于继续验证键盘唤醒后的回包。
